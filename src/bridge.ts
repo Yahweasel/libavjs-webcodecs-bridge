@@ -236,6 +236,53 @@ export async function videoStreamToConfig(
             break;
         }
 
+        case "vp8":
+            ret.codec = "vp8";
+            break;
+
+        case "vp9":
+        {
+            let codec = "vp09";
+
+            // <profile>
+            let profileS = profile.toString();
+            if (profileS.length < 2)
+                profileS = `0${profileS}`;
+            codec += `.${profileS}`;
+
+            // <level>
+            let levelS = level.toString();
+            if (levelS.length < 2)
+                levelS = `0${levelS}`;
+            codec += `.${levelS}`;
+
+            // <bitDepth>
+            const format = await libav.AVCodecParameters_format(stream.codecpar);
+            const desc = await libav.av_pix_fmt_desc_get(format);
+            let bitDepth = (await libav.AVPixFmtDescriptor_comp_depth(desc, 0)).toString();
+            if (bitDepth.length < 2)
+                bitDepth = `0${bitDepth}`;
+            codec += `.${bitDepth}`;
+
+            // <chromaSubsampling>
+            const subX = await libav.AVPixFmtDescriptor_log2_chroma_w(desc);
+            const subY = await libav.AVPixFmtDescriptor_log2_chroma_h(desc);
+            let chromaSubsampling = 0;
+            if (subX > 0 && subY > 0) {
+                chromaSubsampling = 1; // YUV420
+            } else if (subX > 0 || subY > 0) {
+                chromaSubsampling = 2; // YUV422
+            } else {
+                chromaSubsampling = 3; // YUV444
+            }
+            codec += `.0${chromaSubsampling}`;
+
+            codec += ".1.1.1.0";
+
+            ret.codec = codec;
+            break;
+        }
+
         default:
             // Best we can do is a libavjs-webcodecs-polyfill-specific config
             if (typeof LibAVWebCodecs !== "undefined") {
