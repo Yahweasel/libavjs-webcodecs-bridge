@@ -21,27 +21,6 @@ import type * as LibAVJSWebCodecs from "libavjs-webcodecs-polyfill";
 declare let LibAVWebCodecs : any;
 
 /**
- * Convert a libav.js stream to a WebCodecs configuration.
- *
- * @param libav  The libav.js instance that created this stream.
- * @param stream  The stream to convert.
- */
-export async function streamToConfig(
-    libav: LibAVJS.LibAV, stream: LibAVJS.Stream
-): Promise<LibAVJSWebCodecs.AudioDecoderConfig | LibAVJSWebCodecs.VideoDecoderConfig> {
-    switch (stream.codec_type) {
-        case libav.AVMEDIA_TYPE_AUDIO:
-            return audioStreamToConfig(libav, stream);
-
-        case libav.AVMEDIA_TYPE_VIDEO:
-            return videoStreamToConfig(libav, stream);
-
-        default:
-            return null;
-    }
-}
-
-/**
  * Convert a libav.js audio stream to a WebCodecs configuration.
  *
  * @param libav  The libav.js instance that created this stream.
