@@ -134,8 +134,108 @@ export async function videoStreamToConfig(
         extradata = await libav.copyout_u8(extradataPtr, edSize);
     }
 
+    // Some commonly needed data
+    const profile = await libav.AVCodecParameters_profile(stream.codecpar);
+    const level = await libav.AVCodecParameters_level(stream.codecpar);
+
     // Then convert the actual codec
     switch (codecString) {
+        case "av1":
+        {
+            let codec = "av01";
+
+            // <profile>
+            codec += `.0${profile}`;
+
+            // <level><tier>
+            let levelS = level.toString();
+            if (levelS.length < 2)
+                levelS = `0${level}`;
+            const tier = "M"; // FIXME: Is this exposed by ffmpeg?
+            codec += `.${levelS}${tier}`;
+
+            // <bitDepth>
+            const format = await libav.AVCodecParameters_format(stream.codecpar);
+            const desc = await libav.av_pix_fmt_desc_get(format);
+            let bitDepth = (await libav.AVPixFmtDescriptor_comp_depth(desc, 0)).toString();
+            if (bitDepth.length < 2)
+                bitDepth = `0${bitDepth}`;
+            codec += `.${bitDepth}`;
+
+            // <monochrome>
+            const nbComponents = await libav.AVPixFmtDescriptor_nb_components(desc);
+            if (nbComponents < 2)
+                codec += ".1";
+            else
+                codec += ".0";
+
+            // .<chromaSubsampling>
+            let subX = 0, subY = 0, subP = 0;
+            if (nbComponents < 2) {
+                // Monochrome is always considered subsampled (weirdly)
+                subX = 1;
+                subY = 1;
+            } else {
+                subX = await libav.AVPixFmtDescriptor_log2_chroma_w(desc);
+                subY = await libav.AVPixFmtDescriptor_log2_chroma_h(desc);
+                /* FIXME: subP (subsampling position) mainly represents the
+                 * *vertical* position, which doesn't seem to be exposed by
+                 * ffmpeg, at least not in a usable way */
+            }
+            codec += `.${subX}${subY}${subP}`;
+
+            // FIXME: the rest are technically optional, so left out
+            ret.codec = codec;
+            break;
+        }
+
+        case "h264": // avc1
+        {
+            let codec = "avc1";
+
+            // <profile>
+            const profileB = profile & 0xFF;
+            let profileS = profileB.toString(16);
+            if (profileS.length < 2)
+                profileS = `0${profileS}`;
+            codec += `.${profileS}`;
+
+            // <a nonsensical byte with some constraints and some reserved 0s>
+            let constraints = 0;
+            if (profile & 0x100 /* FF_PROFILE_H264_CONSTRAINED */) {
+                // One or more of the constraint bits should be set
+                if (profileB === 66 /* FF_PROFILE_H264_BASELINE */) {
+                    // All three
+                    constraints |= 0xE0;
+                } else if (profileB === 77 /* FF_PROFILE_H264_MAIN */) {
+                    // Only constrained to main
+                    constraints |= 0x60;
+                } else if (profile === 88 /* FF_PROFILE_H264_EXTENDED */) {
+                    // Only constrained to extended
+                    constraints |= 0x20;
+                } else {
+                    // Constrained, but we don't understand how
+                    break;
+                }
+            }
+            let constraintsS = constraints.toString(16);
+            if (constraintsS.length < 2)
+                constraintsS = `0${constraintsS}`;
+            codec += constraintsS;
+
+            // <level>
+            let levelS = level.toString(16);
+            if (levelS.length < 2)
+                levelS = `0${levelS}`;
+            codec += levelS;
+
+            ret.codec = codec;
+
+            if (extradata)
+                ret.description = extradata;
+            break;
+        }
+
         default:
             // Best we can do is a libavjs-webcodecs-polyfill-specific config
             if (typeof LibAVWebCodecs !== "undefined") {
