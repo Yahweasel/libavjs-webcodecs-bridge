@@ -1,12 +1,26 @@
-async function sampleDemux(filename, suffix) {
-    const inF = new Uint8Array(await (await fetch(filename)).arrayBuffer());
-    const libav = await LibAV.LibAV({noworker: true});
-    await libav.writeFile("tmp." + suffix, inF);
+function sampleFileInput(id, func) {
+    const box = document.getElementById(id);
+    box.onchange = function() {
+        const file = box.files[0];
+        if (!file)
+            return;
+        func(file, box);
+    };
+}
 
-    const [fmt_ctx, streams] = await libav.ff_init_demuxer_file("tmp." + suffix);
+async function sampleDemux(file) {
+    const libav = await LibAV.LibAV({noworker: true});
+    await libav.mkreadaheadfile("input", file);
+
+    const [fmt_ctx, streams] = await libav.ff_init_demuxer_file("input");
 
     const configs = await Promise.all(streams.map(stream => {
-        return LibAVWebCodecsBridge.streamToConfig(libav, stream);
+        if (stream.codec_type === libav.AVMEDIA_TYPE_AUDIO)
+            return LibAVWebCodecsBridge.audioStreamToConfig(libav, stream);
+        else if (stream.codec_type === libav.AVMEDIA_TYPE_VIDEO)
+            return LibAVWebCodecsBridge.videoStreamToConfig(libav, stream);
+        else
+            return null;
     }));
 
     const pkt = await libav.av_packet_alloc();
@@ -57,9 +71,7 @@ async function sampleMux(filename, codec, packets, extradata) {
     return ret;
 }
 
-async function decodeAudio(
-    init, packets, stream, AudioDecoder, EncodedAudioChunk, opts = {}
-) {
+async function decodeAudio(init, packets, stream) {
     // Feed them into the decoder
     const frames = [];
     const decoder = new AudioDecoder({
@@ -86,8 +98,6 @@ async function decodeAudio(
     decoder.close();
 
     // And output
-    if (opts.noextract)
-        return frames;
     const out = [];
     const copyOpts = {
         planeIndex: 0,
@@ -100,19 +110,6 @@ async function decodeAudio(
     }
 
     return out;
-}
-
-async function sampleCompareAudio(a, b) {
-    // Quick concat
-    let blob = new Blob(a);
-    a = new Float32Array(await blob.arrayBuffer());
-    blob = new Blob(b);
-    b = new Float32Array(await blob.arrayBuffer());
-
-    let diff = Array.from(a).map((x, idx) => Math.abs(x - b[idx])).reduce((x, y) => x + y);
-    const div = document.createElement("div");
-    div.innerText = `Difference: ${diff}`;
-    document.body.appendChild(div);
 }
 
 async function sampleOutputAudio(a) {
@@ -137,6 +134,35 @@ async function sampleOutputAudio(a) {
     }
 }
 
+async function decodeVideo(init, packets, stream) {
+    // Feed them into the decoder
+    const frames = [];
+    const decoder = new VideoDecoder({
+        output: frame => frames.push(frame),
+        error: x => alert(x)
+    });
+    decoder.configure(init);
+    for (const packet of packets) {
+        let pts = packet.ptshi * 0x100000000 + packet.pts;
+        if (pts < 0)
+            pts = 0;
+        const ts = Math.round(
+            pts * stream.time_base_num / stream.time_base_den *
+            1000000);
+        decoder.decode(new EncodedVideoChunk({
+            type: (packet.flags & 1) ? "key" : "delta",
+            timestamp: ts,
+            data: packet.data
+        }));
+    }
+
+    // Wait for it to finish
+    await decoder.flush();
+    decoder.close();
+
+    return frames;
+}
+
 function sampleOutputVideo(v, fps) {
     const canvas = document.createElement("canvas");
     canvas.style.display = "block";
@@ -147,7 +173,7 @@ function sampleOutputVideo(v, fps) {
 
     let idx = 0;
     const interval = setInterval(async () => {
-        const image = await LibAVWebCodecs.createImageBitmap(v[idx++]);
+        const image = await createImageBitmap(v[idx++]);
         ctx.drawImage(image, 0, 0);
 
         if (idx >= v.length)

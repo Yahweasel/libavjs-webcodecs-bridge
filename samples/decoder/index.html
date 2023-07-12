@@ -1,0 +1,19 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf8" />
+        <title>LibAVJS WebCodecs Bridge Example: Demuxer/decoder</title>
+    </head>
+    <body>
+        <p>NOTE: This sample just demonstrates how to get and pass configurations. It is not efficient, and will freeze or fail on large files, as it does not stream data, but demuxes everything in one shot.</p>
+
+        <!-- LOAD LIBAV.JS HERE -->
+        <script type="text/javascript">LibAV = {base: "../../node_modules/libav.js/dist"};</script>
+        <script type="text/javascript" src="../../node_modules/libav.js/dist/libav-3.11.6.0-all.js"></script>
+        <script type="text/javascript" src="../../libavjs-webcodecs-bridge.js"></script>
+        <script type="text/javascript" src="../util.js"></script>
+        <label for="file">Input file:&nbsp;</label>
+        <input type="file" id="file" />
+        <script type="text/javascript" src="decoder.js"></script>
+    </body>
+</html>
