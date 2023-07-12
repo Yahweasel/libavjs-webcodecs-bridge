@@ -252,6 +252,8 @@ export async function videoStreamToConfig(
 
             // <level>
             let levelS = level.toString();
+            if (level < 0)
+                levelS = "10";
             if (levelS.length < 2)
                 levelS = `0${levelS}`;
             codec += `.${levelS}`;
