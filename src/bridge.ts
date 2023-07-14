@@ -193,46 +193,121 @@ export async function videoStreamToConfig(
         {
             let codec = "avc1";
 
-            // <profile>
-            const profileB = profile & 0xFF;
-            let profileS = profileB.toString(16);
-            if (profileS.length < 2)
-                profileS = `0${profileS}`;
-            codec += `.${profileS}`;
-
-            // <a nonsensical byte with some constraints and some reserved 0s>
-            let constraints = 0;
-            if (profile & 0x100 /* FF_PROFILE_H264_CONSTRAINED */) {
-                // One or more of the constraint bits should be set
-                if (profileB === 66 /* FF_PROFILE_H264_BASELINE */) {
-                    // All three
-                    constraints |= 0xE0;
-                } else if (profileB === 77 /* FF_PROFILE_H264_MAIN */) {
-                    // Only constrained to main
-                    constraints |= 0x60;
-                } else if (profile === 88 /* FF_PROFILE_H264_EXTENDED */) {
-                    // Only constrained to extended
-                    constraints |= 0x20;
-                } else {
-                    // Constrained, but we don't understand how
-                    break;
+            // Technique extracted from hlsenc.c
+            if (extradata &&
+                (extradata[0] | extradata[1] | extradata[2]) === 0 &&
+                extradata[3] === 1 &&
+                (extradata[4] & 0x1F) === 7) {
+                codec += ".";
+                for (let i = 5; i <= 7; i++) {
+                    let s = extradata[i].toString(16);
+                    if (s.length < 2)
+                        s = "0" + s;
+                    codec += s;
                 }
-            }
-            let constraintsS = constraints.toString(16);
-            if (constraintsS.length < 2)
-                constraintsS = `0${constraintsS}`;
-            codec += constraintsS;
 
-            // <level>
-            let levelS = level.toString(16);
-            if (levelS.length < 2)
-                levelS = `0${levelS}`;
-            codec += levelS;
+            } else {
+                // Do it from the stream data alone
+
+               // <profile>
+               const profileB = profile & 0xFF;
+               let profileS = profileB.toString(16);
+               if (profileS.length < 2)
+                   profileS = `0${profileS}`;
+               codec += `.${profileS}`;
+
+               // <a nonsensical byte with some constraints and some reserved 0s>
+               let constraints = 0;
+               if (profile & 0x100 /* FF_PROFILE_H264_CONSTRAINED */) {
+                   // One or more of the constraint bits should be set
+                   if (profileB === 66 /* FF_PROFILE_H264_BASELINE */) {
+                       // All three
+                       constraints |= 0xE0;
+                   } else if (profileB === 77 /* FF_PROFILE_H264_MAIN */) {
+                       // Only constrained to main
+                       constraints |= 0x60;
+                   } else if (profile === 88 /* FF_PROFILE_H264_EXTENDED */) {
+                       // Only constrained to extended
+                       constraints |= 0x20;
+                   } else {
+                       // Constrained, but we don't understand how
+                       break;
+                   }
+               }
+               let constraintsS = constraints.toString(16);
+               if (constraintsS.length < 2)
+                   constraintsS = `0${constraintsS}`;
+               codec += constraintsS;
+
+               // <level>
+               let levelS = level.toString(16);
+               if (levelS.length < 2)
+                   levelS = `0${levelS}`;
+               codec += levelS;
+            }
 
             ret.codec = codec;
-
             if (extradata)
                 ret.description = extradata;
+            break;
+        }
+
+        case "hevc": // hev1
+        {
+            let codec = "hev1";
+
+            if (extradata && extradata.length > 12) {
+                const dv = new DataView(extradata.buffer);
+                ret.description = extradata;
+
+                // Extrapolated from MP4Box.js
+                codec += ".";
+                const profileSpace = extradata[1] >> 6;
+                switch (profileSpace) {
+                    case 1: codec += "A"; break;
+                    case 2: codec += "B"; break;
+                    case 3: codec += "C"; break;
+                }
+
+                const profileIDC = extradata[1] & 0x1F;
+                codec += profileIDC + ".";
+
+                const profileCompatibility = dv.getUint32(2);
+                let val = profileCompatibility;
+                let reversed = 0;
+                for (let i = 0; i < 32; i++) {
+                    reversed |= val & 1;
+                    if (i === 31) break;
+                    reversed <<= 1;
+                    val >>= 1;
+                }
+                codec += reversed.toString(16) + ".";
+
+                const tierFlag = (extradata[1] & 0x20) >> 5;
+                if (tierFlag === 0)
+                    codec += 'L';
+                else
+                    codec += 'H';
+
+                const levelIDC = extradata[12];
+                codec += levelIDC;
+
+                let constraintString = "";
+                for (let i = 11; i >= 6; i--) {
+                    const b = extradata[i];
+                    if (b || constraintString)
+                        constraintString = "." + b.toString(16) + constraintString;
+                }
+                codec += constraintString;
+
+            } else {
+                /* NOTE: This string was extrapolated from hlsenc.c, but is clearly
+                 * not valid for every possible H.265 stream. */
+                codec += `.${profile}.4.L${level}.B01`;
+
+            }
+
+            ret.codec = codec;
             break;
         }
 
