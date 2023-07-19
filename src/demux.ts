@@ -216,41 +216,41 @@ export async function videoStreamToConfig(
             } else {
                 // Do it from the stream data alone
 
-               // <profile>
-               const profileB = profile & 0xFF;
-               let profileS = profileB.toString(16);
-               if (profileS.length < 2)
-                   profileS = `0${profileS}`;
-               codec += `.${profileS}`;
+                // <profile>
+                const profileB = profile & 0xFF;
+                let profileS = profileB.toString(16);
+                if (profileS.length < 2)
+                    profileS = `0${profileS}`;
+                codec += `.${profileS}`;
 
-               // <a nonsensical byte with some constraints and some reserved 0s>
-               let constraints = 0;
-               if (profile & 0x100 /* FF_PROFILE_H264_CONSTRAINED */) {
-                   // One or more of the constraint bits should be set
-                   if (profileB === 66 /* FF_PROFILE_H264_BASELINE */) {
-                       // All three
-                       constraints |= 0xE0;
-                   } else if (profileB === 77 /* FF_PROFILE_H264_MAIN */) {
-                       // Only constrained to main
-                       constraints |= 0x60;
-                   } else if (profile === 88 /* FF_PROFILE_H264_EXTENDED */) {
-                       // Only constrained to extended
-                       constraints |= 0x20;
-                   } else {
-                       // Constrained, but we don't understand how
-                       break;
-                   }
-               }
-               let constraintsS = constraints.toString(16);
-               if (constraintsS.length < 2)
-                   constraintsS = `0${constraintsS}`;
-               codec += constraintsS;
+                // <a nonsensical byte with some constraints and some reserved 0s>
+                let constraints = 0;
+                if (profile & 0x100 /* FF_PROFILE_H264_CONSTRAINED */) {
+                    // One or more of the constraint bits should be set
+                    if (profileB === 66 /* FF_PROFILE_H264_BASELINE */) {
+                        // All three
+                        constraints |= 0xE0;
+                    } else if (profileB === 77 /* FF_PROFILE_H264_MAIN */) {
+                        // Only constrained to main
+                        constraints |= 0x60;
+                    } else if (profile === 88 /* FF_PROFILE_H264_EXTENDED */) {
+                        // Only constrained to extended
+                        constraints |= 0x20;
+                    } else {
+                        // Constrained, but we don't understand how
+                        break;
+                    }
+                }
+                let constraintsS = constraints.toString(16);
+                if (constraintsS.length < 2)
+                    constraintsS = `0${constraintsS}`;
+                codec += constraintsS;
 
-               // <level>
-               let levelS = level.toString(16);
-               if (levelS.length < 2)
-                   levelS = `0${levelS}`;
-               codec += levelS;
+                // <level>
+                let levelS = level.toString(16);
+                if (levelS.length < 2)
+                    levelS = `0${levelS}`;
+                codec += levelS;
             }
 
             ret.codec = codec;
