@@ -19,6 +19,8 @@
 import type * as LibAVJS from "libav.js";
 import type * as LibAVJSWebCodecs from "libavjs-webcodecs-polyfill";
 declare let LibAVWebCodecs : any;
+declare let EncodedAudioChunk : any;
+declare let EncodedVideoChunk : any;
 
 /**
  * Convert a libav.js audio stream to a WebCodecs configuration.
@@ -379,4 +381,70 @@ export async function videoStreamToConfig(
     if (ret.codec)
         return ret;
     return null;
+}
+
+/**
+ * Convert a libav.js audio packet to a WebCodecs EncodedAudioChunk.
+ * @param packet  The packet itself.
+ * @param stream  The stream this packet belongs to (necessary for timestamp conversion).
+ * @param opts  Extra options. In particular, if using a polyfill, you can set
+ *              the EncodedAudioChunk constructor here.
+ */
+export function packetToEncodedAudioChunk(
+    packet: LibAVJS.Packet, stream: LibAVJS.Stream, opts: {
+        EncodedAudioChunk?: any
+    } = {}
+): LibAVJSWebCodecs.EncodedAudioChunk {
+    let EAC: any;
+    if (opts.EncodedAudioChunk)
+        EAC = opts.EncodedAudioChunk;
+    else
+        EAC = EncodedAudioChunk;
+
+    // Convert the timestamp
+    let pts = packet.ptshi * 0x100000000 + packet.pts;
+    if (pts < 0)
+        pts = 0;
+    const ts = Math.round(
+        pts * stream.time_base_num / stream.time_base_den * 1000000
+    );
+
+    return new EAC({
+        type: "key", // all audio chunks are keyframes in all audio codecs
+        timestamp: ts,
+        data: packet.data
+    });
+}
+
+/**
+ * Convert a libav.js video packet to a WebCodecs EncodedVideoChunk.
+ * @param packet  The packet itself.
+ * @param stream  The stream this packet belongs to (necessary for timestamp conversion).
+ * @param opts  Extra options. In particular, if using a polyfill, you can set
+ *              the EncodedVideoChunk constructor here.
+ */
+export function packetToEncodedVideoChunk(
+    packet: LibAVJS.Packet, stream: LibAVJS.Stream, opts: {
+        EncodedVideoChunk?: any
+    } = {}
+): LibAVJSWebCodecs.EncodedVideoChunk {
+    let EVC: any;
+    if (opts.EncodedVideoChunk)
+        EVC = opts.EncodedVideoChunk;
+    else
+        EVC = EncodedVideoChunk;
+
+    // Convert the timestamp
+    let pts = packet.ptshi * 0x100000000 + packet.pts;
+    if (pts < 0)
+        pts = 0;
+    const ts = Math.round(
+        pts * stream.time_base_num / stream.time_base_den * 1000000
+    );
+
+    return new EVC({
+        type: (packet.flags & 1) ? "key" : "delta",
+        timestamp: ts,
+        data: packet.data
+    });
 }

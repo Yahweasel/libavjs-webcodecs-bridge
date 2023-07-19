@@ -9,6 +9,9 @@ function sampleFileInput(id, func) {
 }
 
 async function sampleDemux(file) {
+    /* NOTE: We only use noworker because we load libav.js badly. Your own code
+     * should load libav.js correctly (i.e., locally) and use workers or even
+     * threads! */
     const libav = await LibAV.LibAV({noworker: true});
     await libav.mkreadaheadfile("input", file);
 
@@ -80,17 +83,8 @@ async function decodeAudio(init, packets, stream) {
     });
     decoder.configure(init);
     for (const packet of packets) {
-        let pts = packet.ptshi * 0x100000000 + packet.pts;
-        if (pts < 0)
-            pts = 0;
-        const ts = Math.round(
-            pts * stream.time_base_num / stream.time_base_den *
-            1000000);
-        decoder.decode(new EncodedAudioChunk({
-            type: "key",
-            timestamp: ts,
-            data: packet.data
-        }));
+        decoder.decode(
+            LibAVWebCodecsBridge.packetToEncodedAudioChunk(packet, stream));
     }
 
     // Wait for it to finish
@@ -143,17 +137,8 @@ async function decodeVideo(init, packets, stream) {
     });
     decoder.configure(init);
     for (const packet of packets) {
-        let pts = packet.ptshi * 0x100000000 + packet.pts;
-        if (pts < 0)
-            pts = 0;
-        const ts = Math.round(
-            pts * stream.time_base_num / stream.time_base_den *
-            1000000);
-        decoder.decode(new EncodedVideoChunk({
-            type: (packet.flags & 1) ? "key" : "delta",
-            timestamp: ts,
-            data: packet.data
-        }));
+        decoder.decode(
+            LibAVWebCodecsBridge.packetToEncodedVideoChunk(packet, stream));
     }
 
     // Wait for it to finish
