@@ -1,11 +1,15 @@
-sampleFileInput("file", async function(file, box) {
+importScripts("../worker-util.js");
+
+onmessage = async ev => {
+    const file = ev.data;
+    console.error(file);
     let streams, configs, allPackets;
 
     try {
         [streams, configs, allPackets] =
             await sampleDemux(file);
     } catch (ex) {
-        alert(ex + "\n" + ex.stack);
+        console.error(ex);
         return;
     }
 
@@ -18,14 +22,14 @@ sampleFileInput("file", async function(file, box) {
 
         try {
             if (stream.codec_type === 0 /* video */) {
-                const v = await decodeVideo(config, packets, stream);
-                await sampleOutputVideo(v, 25);
+                await decodeVideo(config, packets, stream);
             } else if (stream.codec_type === 1 /* audio */) {
-                const a = await decodeAudio(config, packets, stream);
-                await sampleOutputAudio(a);
+                await decodeAudio(config, packets, stream);
             }
         } catch (ex) {
-            alert(ex + "\n" + ex.stack);
+            console.error(ex);
         }
     }
-});
+
+    postMessage({c: "done"});
+};

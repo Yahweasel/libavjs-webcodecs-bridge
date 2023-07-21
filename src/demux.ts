@@ -259,11 +259,12 @@ export async function videoStreamToConfig(
             break;
         }
 
-        case "hevc": // hev1
+        case "hevc": // hev1/hvc1
         {
-            let codec = "hev1";
+            let codec;
 
             if (extradata && extradata.length > 12) {
+                codec = "hvc1";
                 const dv = new DataView(extradata.buffer);
                 ret.description = extradata;
 
@@ -310,11 +311,12 @@ export async function videoStreamToConfig(
             } else {
                 /* NOTE: This string was extrapolated from hlsenc.c, but is clearly
                  * not valid for every possible H.265 stream. */
-                codec += `.${profile}.4.L${level}.B01`;
+                codec = `hev1.${profile}.4.L${level}.B01`;
 
             }
 
             ret.codec = codec;
+            console.log(ret);
             break;
         }
 
@@ -388,6 +390,34 @@ export async function videoStreamToConfig(
     return null;
 }
 
+/*
+ * Convert the timestamp and duration from a libav.js packet to microseconds for
+ * WebCodecs.
+ */
+function times(packet: LibAVJS.Packet, stream: LibAVJS.Stream) {
+    // Convert the duration
+    let pDuration = packet.durationhi * 0x100000000 + packet.duration;
+    if (pDuration <= 0)
+        pDuration = 1;
+    const duration = Math.round(
+        pDuration * stream.time_base_num / stream.time_base_den * 1000000
+    );
+
+    // Convert the timestamp
+    let pts = packet.ptshi * 0x100000000 + packet.pts;
+    if (pts < 0)
+        pts = 0;
+    let timestamp = Math.round(
+        pts * stream.time_base_num / stream.time_base_den * 1000000
+    );
+
+    /* libav.js timestamps are at the *beginning* of the frame, but WebCodecs
+     * timestamps are at the *end* */
+    timestamp += duration;
+
+    return {timestamp, duration};
+}
+
 /**
  * Convert a libav.js audio packet to a WebCodecs EncodedAudioChunk.
  * @param packet  The packet itself.
@@ -406,18 +436,13 @@ export function packetToEncodedAudioChunk(
     else
         EAC = EncodedAudioChunk;
 
-    // Convert the timestamp
-    let pts = packet.ptshi * 0x100000000 + packet.pts;
-    if (pts < 0)
-        pts = 0;
-    const ts = Math.round(
-        pts * stream.time_base_num / stream.time_base_den * 1000000
-    );
+    const {timestamp, duration} = times(packet, stream);
 
     return new EAC({
         type: "key", // all audio chunks are keyframes in all audio codecs
-        timestamp: ts,
-        data: packet.data
+        timestamp,
+        duration,
+        data: packet.data.buffer
     });
 }
 
@@ -439,17 +464,12 @@ export function packetToEncodedVideoChunk(
     else
         EVC = EncodedVideoChunk;
 
-    // Convert the timestamp
-    let pts = packet.ptshi * 0x100000000 + packet.pts;
-    if (pts < 0)
-        pts = 0;
-    const ts = Math.round(
-        pts * stream.time_base_num / stream.time_base_den * 1000000
-    );
+    const {timestamp, duration} = times(packet, stream);
 
     return new EVC({
         type: (packet.flags & 1) ? "key" : "delta",
-        timestamp: ts,
-        data: packet.data
+        timestamp,
+        duration,
+        data: packet.data.buffer
     });
 }
