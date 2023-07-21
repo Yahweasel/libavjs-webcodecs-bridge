@@ -10,8 +10,7 @@ language, so to speak.
 This bridge bridges the gap. It includes conversions from the various libav.js
 types to the equivalent WebCodecs types, and vice-versa.
 
-(Actually, as it's very early, right now it only includes some conversions of
-libav.js streams to WebCodecs decoder configurations, but more is on the way.)
+(Actually, right now, it only includes the demuxer side. See src/demux.ts.)
 
 This project is by the same author as libav.js and libavjs-webcodecs-polyfill.
 You do not need libavjs-webcodecs-polyfill to use libavjs-webcodecs-bridge or
