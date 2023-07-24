@@ -411,8 +411,10 @@ function times(packet: LibAVJS.Packet, stream: LibAVJS.Stream) {
         pts * stream.time_base_num / stream.time_base_den * 1000000
     );
 
-    /* libav.js timestamps are at the *beginning* of the frame, but WebCodecs
-     * timestamps are at the *end* */
+    /* libav.js timestamps are at the *beginning* of the frame, but most formats
+     * actually store them at the *end*. To make this consistent with most of
+     * the world (rather than libav.js), and in particular, to avoid timestamps
+     * of 0, which can look like a mistake, place the timestamps at the end. */
     timestamp += duration;
 
     return {timestamp, duration};
