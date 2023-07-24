@@ -142,8 +142,8 @@ export async function videoStreamToConfig(
     }
 
     // Some commonly needed data
-    const profile = await libav.AVCodecParameters_profile(stream.codecpar);
-    const level = await libav.AVCodecParameters_level(stream.codecpar);
+    let profile = await libav.AVCodecParameters_profile(stream.codecpar);
+    let level = await libav.AVCodecParameters_level(stream.codecpar);
 
     // Then convert the actual codec
     switch (codecString) {
@@ -217,6 +217,8 @@ export async function videoStreamToConfig(
                 // Do it from the stream data alone
 
                 // <profile>
+                if (profile < 0)
+                    profile = 77;
                 const profileB = profile & 0xFF;
                 let profileS = profileB.toString(16);
                 if (profileS.length < 2)
@@ -247,6 +249,8 @@ export async function videoStreamToConfig(
                 codec += constraintsS;
 
                 // <level>
+                if (level < 0)
+                    level = 10;
                 let levelS = level.toString(16);
                 if (levelS.length < 2)
                     levelS = `0${levelS}`;
