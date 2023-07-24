@@ -117,20 +117,6 @@ async function decodeAudio(init, packets, stream) {
     // Wait for it to finish
     await decoder.flush();
     decoder.close();
-
-    // And output
-    const out = [];
-    const copyOpts = {
-        planeIndex: 0,
-        format: "f32-planar"
-    };
-    for (const frame of frames) {
-        const ab = new ArrayBuffer(frame.allocationSize(copyOpts));
-        frame.copyTo(ab, copyOpts);
-        out.push(new Float32Array(ab));
-    }
-
-    return out;
 }
 
 async function decodeVideo(init, packets, stream) {
@@ -148,21 +134,9 @@ async function decodeVideo(init, packets, stream) {
     });
     decoder.configure(init);
 
-    let dequeueRes = null;
-    decoder.addEventListener("dequeue", () => {
-        if (dequeueRes) {
-            const dr = dequeueRes;
-            dequeueRes = null;
-            dr();
-        }
-    });
-
-    for (const packet of packets) {
+    for (const packet of packets.slice(0, 128)) {
         const evc = LibAVWebCodecsBridge.packetToEncodedVideoChunk(packet, stream);
         decoder.decode(evc);
-        while (decoder.decodeQueueSize)
-            await new Promise(res => dequeueRes = res);
-        await new Promise(res => setTimeout(res, 0));
     }
 
     // Wait for it to finish
