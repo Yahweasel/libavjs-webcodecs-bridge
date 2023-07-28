@@ -9,7 +9,7 @@
     "typescript": "^5.1.6"
   },
   "name": "libavjs-webcodecs-bridge",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "A bridge between libav.js and WebCodecs, to allow easier decoding of files demuxed by libav.js",
   "main": "libavjs-webcodecs-bridge.min.js",
   "types": "src/bridge.ts",
