@@ -1,10 +1,16 @@
-all: libavjs-webcodecs-bridge.min.js
+all: libavjs-webcodecs-bridge.min.js types/bridge.d.ts
 
 libavjs-webcodecs-bridge.js: src/*.ts node_modules/.bin/browserify
 	./src/build.js > $@
 
 libavjs-webcodecs-bridge.min.js: libavjs-webcodecs-bridge.js node_modules/.bin/browserify
 	./node_modules/.bin/minify --js < $< > $@
+
+types/bridge.d.ts:
+	mkdir -p types
+	./node_modules/.bin/tsc \
+		--declaration --emitDeclarationOnly \
+		--outDir types
 
 better-samples:
 	for i in samples/*/; do \
@@ -19,3 +25,4 @@ node_modules/.bin/browserify:
 
 clean:
 	rm -f libavjs-webcodecs-bridge.js libavjs-webcodecs-bridge.min.js
+	rm -rf types
