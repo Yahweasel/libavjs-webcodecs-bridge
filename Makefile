@@ -6,7 +6,7 @@ libavjs-webcodecs-bridge.js: src/*.ts node_modules/.bin/browserify
 libavjs-webcodecs-bridge.min.js: libavjs-webcodecs-bridge.js node_modules/.bin/browserify
 	./node_modules/.bin/minify --js < $< > $@
 
-types/bridge.d.ts:
+types/bridge.d.ts: src/*.ts node_modules/.bin/browserify
 	mkdir -p types
 	./node_modules/.bin/tsc \
 		--declaration --emitDeclarationOnly \
