@@ -8,7 +8,7 @@
   },
   "dependencies": {
     "libav.js": "^4.3.6",
-    "libavjs-webcodecs-polyfill": "^0.4.1"
+    "libavjs-webcodecs-polyfill": "^0.4.2"
   },
   "name": "libavjs-webcodecs-bridge",
   "version": "0.0.3",
