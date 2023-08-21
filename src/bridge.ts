@@ -22,8 +22,13 @@
  */
 
 import * as demux from "./demux";
+import * as mux from "./mux";
 
 export const audioStreamToConfig = demux.audioStreamToConfig;
 export const videoStreamToConfig = demux.videoStreamToConfig;
 export const packetToEncodedAudioChunk = demux.packetToEncodedAudioChunk;
 export const packetToEncodedVideoChunk = demux.packetToEncodedVideoChunk;
+
+export const configToAudioStream = mux.configToAudioStream;
+export const configToVideoStream = mux.configToVideoStream;
+export const encodedAudioChunkToPacket = mux.encodedAudioChunkToPacket;
