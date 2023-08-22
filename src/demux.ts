@@ -334,6 +334,8 @@ export async function videoStreamToConfig(
 
             // <profile>
             let profileS = profile.toString();
+            if (profile < 0)
+                profileS = "00";
             if (profileS.length < 2)
                 profileS = `0${profileS}`;
             codec += `.${profileS}`;
@@ -350,6 +352,8 @@ export async function videoStreamToConfig(
             const format = await libav.AVCodecParameters_format(stream.codecpar);
             const desc = await libav.av_pix_fmt_desc_get(format);
             let bitDepth = (await libav.AVPixFmtDescriptor_comp_depth(desc, 0)).toString();
+            if (bitDepth === "0")
+                bitDepth = "08";
             if (bitDepth.length < 2)
                 bitDepth = `0${bitDepth}`;
             codec += `.${bitDepth}`;
