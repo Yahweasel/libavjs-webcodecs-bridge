@@ -43,7 +43,7 @@ export async function configToAudioStream(
     if (typeof codecLong === "object")
         codec = codecLong.libavjs.codec;
     else
-        codec = codec.replace(/\..*/, "");
+        codec = codecLong.replace(/\..*/, "");
 
     // Convert the codec to a libav name
     switch (codec) {
@@ -99,7 +99,7 @@ export async function configToVideoStream(
     if (typeof codecLong === "object")
         codec = codecLong.libavjs.codec;
     else
-        codec = codec.replace(/\..*/, "");
+        codec = codecLong.replace(/\..*/, "");
 
     // Convert the codec to a libav name
     switch (codec) {
