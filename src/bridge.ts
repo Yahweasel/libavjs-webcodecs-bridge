@@ -32,3 +32,4 @@ export const packetToEncodedVideoChunk = demux.packetToEncodedVideoChunk;
 export const configToAudioStream = mux.configToAudioStream;
 export const configToVideoStream = mux.configToVideoStream;
 export const encodedAudioChunkToPacket = mux.encodedAudioChunkToPacket;
+export const encodedVideoChunkToPacket = mux.encodedVideoChunkToPacket;

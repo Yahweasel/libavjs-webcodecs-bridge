@@ -29,7 +29,7 @@ if (typeof importScripts !== "undefined") {
     importScripts("../../libavjs-webcodecs-bridge.js");
 }
 
-async function sampleDemux(file) {
+async function sampleDemux(file, readOpts) {
     /* NOTE: noworker is not mandatory (this is in a worker, so it's fine)! */
     const libav = await LibAV.LibAV({noworker: true});
     await libav.mkreadaheadfile("input", file);
@@ -46,7 +46,7 @@ async function sampleDemux(file) {
     }));
 
     const pkt = await libav.av_packet_alloc();
-    const [, packets] = await libav.ff_read_multi(fmt_ctx, pkt);
+    const [, packets] = await libav.ff_read_multi(fmt_ctx, pkt, null, readOpts);
 
     libav.terminate();
 
