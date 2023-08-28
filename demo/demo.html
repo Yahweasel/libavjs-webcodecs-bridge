@@ -1,0 +1,290 @@
+<!doctype html>
+<!--
+ * This (un)license applies only to this sample code, and not to
+ * libavjs-webcodecs-bridge as a whole:
+ *
+ * This is free and unencumbered software released into the public domain.
+ *
+ * Anyone is free to copy, modify, publish, use, compile, sell, or distribute
+ * this software, either in source code form or as a compiled binary, for any
+ * purpose, commercial or non-commercial, and by any means.
+ *
+ * In jurisdictions that recognize copyright laws, the author or authors of
+ * this software dedicate any and all copyright interest in the software to the
+ * public domain. We make this dedication for the benefit of the public at
+ * large and to the detriment of our heirs and successors. We intend this
+ * dedication to be an overt act of relinquishment in perpetuity of all present
+ * and future rights to this software under copyright law.
+ *
+ * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+-->
+<html>
+    <head>
+        <meta charset="utf8" />
+        <title>LibAVJS WebCodecs Streaming Transcode Example</title>
+    </head>
+    <body>
+        <script type="text/javascript">LibAV = {base: "https://unpkg.com/libav.js@4.5.6/dist"};</script>
+        <script type="text/javascript" src="https://unpkg.com/libav.js@4.5.6/dist/libav-4.5.6.0-webcodecs.js"></script>
+
+        <script type="text/javascript" src="../libavjs-webcodecs-bridge.js"></script>
+
+        <div id="input-box">
+            <label for="vc">Video codec:&nbsp;</label>
+            <select id="vc">
+                <option value="vp09.00.10.08.03.1.1.1.0">VP9</option>
+                <option value="vp8">VP8</option>
+                <option value="avc1.42403e">H.264</option>
+            </select><br/>
+            <label for="ac">Audio codec:&nbsp;</label>
+            <select id="ac">
+                <option value="opus">Opus</option>
+                <option value="mp4a.40.2">AAC</option>
+            </select><br/>
+            <label for="file">Input file:&nbsp;</label>
+            <input type="file" id="file" />
+        </div>
+
+        <script type="text/javascript">
+            async function main() {
+                try {
+                    // Get an input file
+                    const fileBox = document.getElementById("file");
+                    await new Promise(res => {
+                        fileBox.onchange = function() {
+                            if (fileBox.files.length)
+                                res();
+                        };
+                    });
+                    const file = fileBox.files[0];
+                    document.getElementById("input-box").style.display = "none";
+
+                    // Codec info
+                    const vc = document.getElementById("vc").value;
+                    const ac = document.getElementById("ac").value;
+
+                    /* Prepare libav. We're using noworker here because libav is
+                     * loaded from a different origin, but you should simply
+                     * load libav from the same origin! */
+                    const libav = await LibAV.LibAV({noworker: true});
+                    await libav.mkreadaheadfile("input", file);
+
+                    // Start demuxer
+                    const [ifc, istreams] =
+                        await libav.ff_init_demuxer_file("input");
+
+                    let encoders = new Array(istreams.length);
+                    let encConfigs = new Array(istreams.length);
+
+                    // Translate all the streams
+                    const decoders = new Array(istreams.length);
+                    const decConfigs = new Array(istreams.length);
+                    let decodersConfigured = 0;
+                    for (let streamI = 0; streamI < istreams.length; streamI++) {
+                        const istream = istreams[streamI];
+                        if (istream.codec_type === libav.AVMEDIA_TYPE_VIDEO) {
+                            // Convert the config
+                            const config =
+                                await LibAVWebCodecsBridge.videoStreamToConfig(
+                                    libav, istream);
+                            const supported =
+                                await VideoDecoder.isConfigSupported(config);
+                            if (!supported.supported)
+                                continue;
+                            decConfigs[streamI] = config;
+
+                            // Make the decoder
+                            const dec = new VideoDecoder({
+                                output: frame => {
+                                    encoders[streamI].encode(frame);
+                                    frame.close();
+                                },
+                                error: alert
+                            });
+                            dec.configure(config);
+                            decoders[streamI] = dec;
+                            decodersConfigured++;
+
+                        } else if (istream.codec_type === libav.AVMEDIA_TYPE_AUDIO) {
+                            // Convert the config
+                            const config =
+                                await LibAVWebCodecsBridge.audioStreamToConfig(
+                                    libav, istream);
+                            const supported =
+                                await AudioDecoder.isConfigSupported(config);
+                            if (!supported.supported)
+                                continue;
+                            decConfigs[streamI] = config;
+
+                            // Make the decoder
+                            const dec = new AudioDecoder({
+                                output: frame => {
+                                    encoders[streamI].encode(frame);
+                                    frame.close();
+                                },
+                                error: alert
+                            });
+                            dec.configure(config);
+                            decoders[streamI] = dec;
+                            decodersConfigured++;
+
+                        }
+                    }
+
+                    if (!decodersConfigured)
+                        throw new Error("No decodable streams found!");
+
+                    // libav output stream info
+                    let oc, pb, pkt;
+                    let ostreams = new Array(istreams.length);
+                    let ostreamIs = new Array(istreams.length);
+                    let outputPromise = Promise.all([]);
+
+                    // Prepare the encoders
+                    for (let streamI = 0; streamI < istreams.length; streamI++) {
+                        const istream = istreams[streamI];
+                        if (!decoders[streamI])
+                            continue;
+
+                        if (istream.codec_type === libav.AVMEDIA_TYPE_VIDEO) {
+                            const iconfig = decConfigs[streamI];
+                            const config = encConfigs[streamI] = {
+                                codec: vc,
+                                width: iconfig.codedWidth,
+                                height: iconfig.codedHeight
+                            };
+                            ostreams[streamI] =
+                                await LibAVWebCodecsBridge.configToVideoStream(
+                                    libav, config);
+                            const enc = encoders[streamI] = new VideoEncoder({
+                                output: (chunk, metadata) => {
+                                    outputPromise = outputPromise.then(async () => {
+                                        // Convert it
+                                        const packet =
+                                            await LibAVWebCodecsBridge.encodedVideoChunkToPacket(
+                                                libav, chunk, metadata, ostreams[streamI], ostreamIs[streamI]);
+
+                                        // Mux it
+                                        console.log(packet);
+                                        await libav.ff_write_multi(oc, pkt, [packet]);
+                                    });
+                                },
+
+                                error: alert
+                            });
+                            enc.configure(config);
+
+                        } else if (istream.codec_type === libav.AVMEDIA_TYPE_AUDIO) {
+                            const iconfig = decConfigs[streamI];
+                            const config = encConfigs[streamI] = {
+                                codec: ac,
+                                sampleRate: iconfig.sampleRate,
+                                numberOfChannels: iconfig.numberOfChannels
+                            };
+                            ostreams[streamI] =
+                                await LibAVWebCodecsBridge.configToAudioStream(
+                                    libav, config);
+                            const enc = encoders[streamI] = new AudioEncoder({
+                                output: (chunk, metadata) => {
+                                    outputPromise = outputPromise.then(async () => {
+                                        // Convert it
+                                        const packet =
+                                            await LibAVWebCodecsBridge.encodedAudioChunkToPacket(
+                                                libav, chunk, metadata, ostreams[streamI], ostreamIs[streamI]);
+
+                                        // Mux it
+                                        await libav.ff_write_multi(oc, pkt, [packet]);
+                                    });
+                                },
+
+                                error: alert
+                            });
+                            enc.configure(config);
+
+                        }
+                    }
+
+                    // Prepare the muxer
+                    const ostreamArr = [];
+                    for (let streamI = 0; streamI < istreams.length; streamI++) {
+                        if (!ostreams[streamI])
+                            continue;
+                        ostreamIs[streamI] = ostreamArr.length;
+                        ostreamArr.push(ostreams[streamI]);
+                    }
+                    [oc, , pb] = await libav.ff_init_muxer({
+                        filename: "output.mkv",
+                        open: true,
+                        codecpars: true
+                    }, ostreamArr);
+                    await libav.avformat_write_header(oc);
+                    pkt = await libav.av_packet_alloc();
+
+                    // Then demux, mux, etc
+                    while (true) {
+                        const [res, packets] =
+                            await libav.ff_read_multi(ifc, pkt, null, {limit: 1});
+                        if (res !== 0 && res !== -libav.EAGAIN)
+                            break;
+                        for (const streamI in packets) {
+                            if (!decoders[streamI])
+                                continue;
+                            for (const packet of packets[streamI]) {
+                                if (!packet.data.length)
+                                    continue;
+
+                                // Convert it
+                                let ec;
+                                if (istreams[streamI].codec_type === libav.AVMEDIA_TYPE_VIDEO) {
+                                    ec = LibAVWebCodecsBridge.packetToEncodedVideoChunk(
+                                        packet, istreams[streamI]);
+                                } else {
+                                    ec = LibAVWebCodecsBridge.packetToEncodedAudioChunk(
+                                        packet, istreams[streamI]);
+                                }
+
+                                // And decode it
+                                console.log(packet);
+                                decoders[streamI].decode(ec);
+
+                                // FIXME: Wait for it to decode?
+                            }
+                        }
+                    }
+
+                    // Wait for everything to finish
+                    for (let streamI = 0; streamI < istreams.length; streamI++) {
+                        if (!decoders[streamI])
+                            continue;
+                        await decoders[streamI].flush();
+                        await encoders[streamI].flush();
+                    }
+                    await outputPromise;
+                    await libav.av_write_trailer(oc);
+
+                    // Clean up
+                    await libav.avformat_close_input_js(ifc);
+                    await libav.ff_free_muxer(oc, pb);
+                    await libav.av_packet_free(pkt);
+
+                    // And fetch the file
+                    const output = await libav.readFile("output.mkv");
+                    await libav.terminate();
+                    const ofile = new File([output.buffer], "output.mkv",
+                        {type: "video/x-matroska"});
+                    document.location.href = URL.createObjectURL(ofile);
+
+                } catch (ex) {
+                    alert(ex + "\n\n" + ex.stack);
+                }
+            }
+
+            main();
+        </script>
+    </body>
+</html>
