@@ -320,7 +320,6 @@ export async function videoStreamToConfig(
             }
 
             ret.codec = codec;
-            console.log(ret);
             break;
         }
 

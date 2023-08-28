@@ -43,16 +43,20 @@ onmessage = async ev => {
     let outStreams = [];
     let decoders = new Array(streams.length);
     let oc, pb, pkt;
+    let transcodePromise = Promise.all([]);
     for (let si = 0; si < streams.length; si++) {
         const inStream = streams[si];
         if (inStream.codec_type === 0 /* video */) {
             // ENCODING
             const oi = outStreams.length;
             const enc = new VideoEncoder({
-                output: async chunk => {
-                    const packet = LibAVWebCodecsBridge.encodedVideoChunkToPacket(
-                        chunk, outStreams[oi].stream, oi);
-                    await libav.ff_write_multi(oc, pkt, [packet]);
+                output: (chunk, metadata) => {
+                    transcodePromise = transcodePromise.then(async () => {
+                        const packet =
+                            await LibAVWebCodecsBridge.encodedVideoChunkToPacket(
+                                libav, chunk, metadata, outStreams[oi].stream, oi);
+                        await libav.ff_write_multi(oc, pkt, [packet]);
+                    });
                 },
                 error: err => {
                     console.error(`video encoder ${oi}: ${err.toString()}`);
@@ -69,8 +73,9 @@ onmessage = async ev => {
 
             // DECODING
             const dec = new VideoDecoder({
-                output: chunk => {
-                    enc.encode(chunk);
+                output: frame => {
+                    enc.encode(frame);
+                    frame.close();
                 },
                 error: err => {
                     console.error(`video decoder ${oi}: ${err.toString()}`);
@@ -92,10 +97,13 @@ onmessage = async ev => {
             // ENCODING
             const oi = outStreams.length;
             const enc = new AudioEncoder({
-                output: async chunk => {
-                    const packet = LibAVWebCodecsBridge.encodedAudioChunkToPacket(
-                        chunk, outStreams[oi].stream, oi);
-                    await libav.ff_write_multi(oc, pkt, [packet]);
+                output: (chunk, metadata) => {
+                    transcodePromise = transcodePromise.then(async () => {
+                        const packet =
+                            await LibAVWebCodecsBridge.encodedAudioChunkToPacket(
+                                libav, chunk, metadata, outStreams[oi].stream, oi);
+                        await libav.ff_write_multi(oc, pkt, [packet]);
+                    });
                 },
                 error: err => {
                     console.error(`audio encoder ${oi}: ${err.toString()}`);
@@ -112,8 +120,9 @@ onmessage = async ev => {
 
             // DECODING
             const dec = new AudioDecoder({
-                output: chunk => {
-                    enc.encode(chunk);
+                output: frame => {
+                    enc.encode(frame);
+                    frame.close();
                 },
                 error: err => {
                     console.error(`audio decoder ${oi}: ${err.toString()}`);
@@ -166,7 +175,7 @@ onmessage = async ev => {
         await stream.encoder.flush();
         stream.encoder.close();
     }
-    await libav.ff_write_multi(oc, pkt, [], true);
+    await transcodePromise;
     await libav.av_write_trailer(oc);
     await libav.av_packet_free(pkt);
     await libav.ff_free_muxer(oc, pb);

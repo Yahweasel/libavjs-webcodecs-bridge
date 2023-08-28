@@ -24,8 +24,8 @@
  */
 
 if (typeof importScripts !== "undefined") {
-    LibAV = {base: "https://unpkg.com/libav.js@4.4.6/dist"};
-    importScripts(LibAV.base + "/libav-4.4.6.0-webcodecs.js");
+    LibAV = {base: "https://unpkg.com/libav.js@4.5.6/dist"};
+    importScripts(LibAV.base + "/libav-4.5.6.0-webcodecs.js");
     importScripts("../../libavjs-webcodecs-bridge.js");
 }
 
