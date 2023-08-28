@@ -211,27 +211,56 @@ function encodedChunkToPacket(
 
 /**
  * Convert a WebCodecs EncodedAudioChunk to a libav.js packet for muxing.
+ * @param libav  The libav.js instance that created this stream.
  * @param chunk  The chunk itself.
+ * @param metadata  The metadata sent with this chunk.
  * @param stream  The stream this packet belongs to (necessary for timestamp conversion).
  * @param streamIndex  The stream index to inject into the packet
  */
-export function encodedAudioChunkToPacket(
-    chunk: LibAVJSWebCodecs.EncodedAudioChunk, stream: [number, number, number], streamIndex: number
-): LibAVJS.Packet {
+export async function encodedAudioChunkToPacket(
+    libav: LibAVJS.LibAV, chunk: LibAVJSWebCodecs.EncodedAudioChunk, metadata: any,
+    stream: [number, number, number], streamIndex: number
+): Promise<LibAVJS.Packet> {
+    // NOTE: libav and metadata are not currently used for audio
     return encodedChunkToPacket(chunk, stream, streamIndex);
 }
 
 /**
- * Convert a WebCodecs EncodedVideoChunk to a libav.js packet for muxing.
+ * Convert a WebCodecs EncodedVideoChunk to a libav.js packet for muxing. Note
+ * that this also may modify codecpar, if the packet comes with extradata.
+ * @param libav  The libav.js instance that created this stream.
  * @param chunk  The chunk itself.
+ * @param metadata  The metadata sent with this chunk.
  * @param stream  The stream this packet belongs to (necessary for timestamp conversion).
  * @param streamIndex  The stream index to inject into the packet
  */
-export function encodedVideoChunkToPacket(
-    chunk: LibAVJSWebCodecs.EncodedVideoChunk, stream: [number, number, number], streamIndex: number
-): LibAVJS.Packet {
+export async function encodedVideoChunkToPacket(
+    libav: LibAVJS.LibAV, chunk: LibAVJSWebCodecs.EncodedVideoChunk, metadata: any,
+    stream: [number, number, number], streamIndex: number
+): Promise<LibAVJS.Packet> {
     const ret = encodedChunkToPacket(chunk, stream, streamIndex);
     if (chunk.type === "key")
         ret.flags = 1;
+
+    // Copy in the extradata if applicable
+    if (stream[0] && metadata && metadata.decoderConfig && metadata.decoderConfig.description) {
+        const codecpar = stream[0];
+        const oldExtradata = await libav.AVCodecParameters_extradata(codecpar);
+        if (!oldExtradata) {
+            let description: any = metadata.decoderConfig.description;
+            if (description.buffer)
+                description = description.slice(0);
+            else
+                description = (new Uint8Array(description)).slice(0);
+            const extradata =
+                await libav.malloc(description.length);
+            await libav.copyin_u8(extradata, description);
+            await libav.AVCodecParameters_extradata_s(
+                codecpar, extradata);
+            await libav.AVCodecParameters_extradata_size_s(
+                codecpar, description.length);
+        }
+    }
+
     return ret;
 }
