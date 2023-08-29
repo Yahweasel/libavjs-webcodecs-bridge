@@ -161,8 +161,6 @@ async function main() {
                 const dec = decoders[o];
                 const p2c = packetToChunks[o];
                 for (const packet of packets[idx]) {
-                    if (packet.data.length === 0)
-                        continue;
                     const chunk = p2c(packet, istreams[idx]);
                     while (dec.decodeQueueSize) {
                         await new Promise(res => {
