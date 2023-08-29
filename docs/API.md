@@ -96,8 +96,13 @@ streams. These functions will *always* return something, regardless of whether
 the codec is recognized or libav.js supports it, so make sure to check whether
 `ff_init_muxer` actually succeeds.
 
-Note that these return `AVCodecParameters`, so you must set the `codecpars`
+Two things of note about this function:
+ - These return `AVCodecParameters`, so you must set the `codecpars`
 option to `true` when calling `ff_init_muxer`.
+ - Because of differences between libav.js and WebCodecs, you must convert at
+   least one chunk from each stream to a packet *before* starting the muxer.
+   This is because of codec parameters that are only passed with the first
+   encoded chunk. `demo/demo.js` demonstrates this.
 
 ### `encodedAudioChunkToPacket`, `encodedVideoChunkToPacket`
 
