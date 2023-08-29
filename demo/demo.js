@@ -52,7 +52,8 @@ async function main() {
     // Start demuxer
     const [ifc, istreams] =
         await libav.ff_init_demuxer_file("input");
-    const pkt = await libav.av_packet_alloc();
+    const rpkt = await libav.av_packet_alloc();
+    const wpkt = await libav.av_packet_alloc();
 
     // Translate all the streams
     const iToO = [];
@@ -147,7 +148,7 @@ async function main() {
     (async () => {
         while (true) {
             const [res, packets] =
-                await libav.ff_read_multi(ifc, pkt, null, {limit: 1});
+                await libav.ff_read_multi(ifc, rpkt, null, {limit: 1});
             if (res !== -libav.EAGAIN &&
                 res !== 0 &&
                 res !== libav.AVERROR_EOF)
@@ -160,6 +161,8 @@ async function main() {
                 const dec = decoders[o];
                 const p2c = packetToChunks[o];
                 for (const packet of packets[idx]) {
+                    if (packet.data.length === 0)
+                        continue;
                     const chunk = p2c(packet, istreams[idx]);
                     while (dec.decodeQueueSize) {
                         await new Promise(res => {
@@ -230,7 +233,7 @@ async function main() {
         await libav.avformat_write_header(ofc, 0);
 
         // And pass in the starter packets
-        await libav.ff_write_multi(ofc, pkt, starterPackets);
+        await libav.ff_write_multi(ofc, wpkt, starterPackets);
     }
 
     // Now pass through everything else
@@ -248,7 +251,7 @@ async function main() {
                 writePromise = writePromise.then(async () => {
                     const packet = await chunkToPacket(
                         libav, value.chunk, value.metadata, ostream, i);
-                    await libav.ff_write_multi(ofc, pkt, [packet]);
+                    await libav.ff_write_multi(ofc, wpkt, [packet]);
                 });
             }
         })());
@@ -263,7 +266,8 @@ async function main() {
     // Clean up
     await libav.avformat_close_input_js(ifc);
     await libav.ff_free_muxer(ofc, pb);
-    await libav.av_packet_free(pkt);
+    await libav.av_packet_free(rpkt);
+    await libav.av_packet_free(wpkt);
 
     // And fetch the file
     const output = await libav.readFile("output.mkv");
