@@ -11,7 +11,7 @@
     "libavjs-webcodecs-polyfill": "^0.4.2"
   },
   "name": "libavjs-webcodecs-bridge",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "A bridge between libav.js and WebCodecs, to allow easier decoding of files demuxed by libav.js",
   "main": "libavjs-webcodecs-bridge.js",
   "types": "types/bridge.d.ts",
