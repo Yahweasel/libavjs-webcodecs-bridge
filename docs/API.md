@@ -107,21 +107,33 @@ option to `true` when calling `ff_init_muxer`.
 ### `encodedAudioChunkToPacket`, `encodedVideoChunkToPacket`
 
 ```
-function encodedAudioChunkToPacket(
-    chunk: LibAVJSWebCodecs.EncodedAudioChunk, stream: [number, number, number], streamIndex: number
-): LibAVJS.Packet;
+async function encodedAudioChunkToPacket(
+    libav: LibAVJS.LibAV, chunk: LibAVJSWebCodecs.EncodedAudioChunk, metadata: any,
+    stream: [number, number, number], streamIndex: number
+): Promise<LibAVJS.Packet>;
 
-function encodedVideoChunkToPacket(
-    chunk: LibAVJSWebCodecs.EncodedVideoChunk, stream: [number, number, number], streamIndex: number
-): LibAVJS.Packet;
+async function encodedVideoChunkToPacket(
+    libav: LibAVJS.LibAV, chunk: LibAVJSWebCodecs.EncodedVideoChunk, metadata: any,
+    stream: [number, number, number], streamIndex: number
+): Promise<LibAVJS.Packet>;
 ```
 
 WebCodecs encoded chunks (`EncodedAudioChunk`s and `EncodedVideoChunk`s) can be
 converted to libav.js `Packet`s, for use in `ff_write_multi`.
 
 To convert an audio chunk to a libav.js packet, use
-`encodedAudioChunkToPacket(chunk, stream, streamIndex)`. `stream` is the stream
+`encodedAudioChunkToPacket(libav, chunk, metadata, stream, streamIndex)`.
+`libav` is the libav.js instance in use, `chunk` is the encoded chunk,
+`metadata` is the metadata sent with the chunk, `stream` is the stream
 information returned by `configToAudioStream`, and `streamIndex` is the index of
 the stream in your call to `ff_init_muxer`. Use `encodedVideoChunkToPacket` for
-video chunks. Note that these functions are synchronous, and that they do *not*
-close the input chunks.
+video chunks. Note that these functions are asynchronous, unlike their demuxing
+counterparts.
+
+Due to differences in how libav and WebCodecs handle extra data for codecs, *you
+must convert at least one packet from each stream before initializing the
+muxer*. These functions convert the packet, but also initialize the extra codec
+data (because in WebCodecs it's sent with the first packet), and that extra
+codec data must be initialized before the muxer. This can make the ordering of
+tasks a bit awkward, but is unavoidable. You may want to look at the demo in
+`demo/` for an example of the correct ordering of steps.
