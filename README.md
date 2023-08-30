@@ -16,4 +16,6 @@ vice versa; they have related but orthogonal purposes. For type reasons, this
 repository depends on both, but even if you bundle libavjs-webcodecs-bridge,
 neither will be included.
 
-libavjs-webcodecs-bridge's API is documented in [API.md](docs/API.md).
+libavjs-webcodecs-bridge's API is documented in [API.md](docs/API.md). The demo
+in the `demo` directory is a demonstration of start-to-finish transcoding, and
+there are some samples in the `samples` directory as well.
