@@ -92,7 +92,7 @@ export async function configToAudioStream(
  * @returns [address of codecpar, timebase numerator, timebase denominator]
  */
 export async function configToVideoStream(
-    libav: LibAVJS.LibAV, config: LibAVJSWebCodecs.VideoEncoderConfig
+    libav: LibAVJS.LibAV, config: LibAVJSWebCodecs.VideoEncoderConfig | VideoEncoderConfig
 ): Promise<[number, number, number]> {
     const codecLong = config.codec;
     let codec: string;
@@ -162,7 +162,7 @@ export async function configToVideoStream(
  * Convert the timestamp and duration from microseconds to an arbitrary timebase
  * given by libav.js (internal)
  */
-function times(chunk: LibAVJSWebCodecs.EncodedVideoChunk, stream: [number, number, number]) {
+function times(chunk: LibAVJSWebCodecs.EncodedAudioChunk | LibAVJSWebCodecs.EncodedVideoChunk | EncodedVideoChunk, stream: [number, number, number]) {
     const num = stream[1];
     const den = stream[2];
     return {
@@ -175,7 +175,7 @@ function times(chunk: LibAVJSWebCodecs.EncodedVideoChunk, stream: [number, numbe
  * Convert a WebCodecs Encoded{Audio,Video}Chunk to a libav.js packet for muxing. Internal.
  */
 function encodedChunkToPacket(
-    chunk: LibAVJSWebCodecs.EncodedAudioChunk | LibAVJSWebCodecs.EncodedVideoChunk,
+    chunk: LibAVJSWebCodecs.EncodedAudioChunk | LibAVJSWebCodecs.EncodedVideoChunk | EncodedVideoChunk,
     stream: [number, number, number], streamIndex: number
 ): LibAVJS.Packet {
     const {timestamp, duration} = times(chunk, stream);
@@ -235,7 +235,7 @@ export async function encodedAudioChunkToPacket(
  * @param streamIndex  The stream index to inject into the packet
  */
 export async function encodedVideoChunkToPacket(
-    libav: LibAVJS.LibAV, chunk: LibAVJSWebCodecs.EncodedVideoChunk, metadata: any,
+    libav: LibAVJS.LibAV, chunk: LibAVJSWebCodecs.EncodedVideoChunk | EncodedVideoChunk, metadata: any,
     stream: [number, number, number], streamIndex: number
 ): Promise<LibAVJS.Packet> {
     const ret = encodedChunkToPacket(chunk, stream, streamIndex);
