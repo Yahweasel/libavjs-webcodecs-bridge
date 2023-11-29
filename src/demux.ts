@@ -258,7 +258,7 @@ export async function videoStreamToConfig(
             }
 
             ret.codec = codec;
-            if (extradata)
+            if (extradata && extradata[0])
                 ret.description = extradata;
             break;
         }
