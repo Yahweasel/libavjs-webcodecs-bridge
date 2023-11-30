@@ -16,7 +16,7 @@ convert each `Packet` to an encoded chunk to be decoded in WebCodecs.
 
 ### `audioStreamToConfig`, `videoStreamToConfig`
 
-```
+```js
 async function audioStreamToConfig(
     libav: LibAVJS.LibAV, stream: LibAVJS.Stream
 ): Promise<LibAVJSWebCodecs.AudioDecoderConfig>;
@@ -38,7 +38,7 @@ the configuration is actually supported.
 
 ### `packetToEncodedAudioChunk`, `packetToEncodedVideoChunk`
 
-```
+```js
 function packetToEncodedAudioChunk(
     packet: LibAVJS.Packet, stream: LibAVJS.Stream, opts: {
         EncodedAudioChunk?: any
@@ -63,6 +63,21 @@ If you're using a polyfill, you can pass the `EncodedAudioChunk` or
 `EncodedVideoChunk` constructor as the appropriate field of the third (`opts`)
 argument.
 
+Note that FFmpeg (and thus libav.js) and WebCodecs disagree on the definition of
+keyframe with both H.264 and H.265. WebCodecs requires a non-recovery frame,
+i.e., a keyframe with no B-frames, whereas FFmpeg takes the keyframe status from
+the container, and all container formats mark recovery frames as keyframes
+(because they are keyframes). No implementation of WebCodecs actually cares
+whether you mark a frame as a keyframe or a delta frame *except* for the first
+frame sent to the decoder. The consequence of this is that if you seek to the
+middle of an H.264 or H.265 file and read a frame that libav.js indicates is a
+keyframe, you may not actually be able to start decoding with that frame. There
+is no practical way to fix this on the libavjs-webcodecs-bridge side, because
+FFmpeg offers no API to distinguish these frame types; it would be necessary to
+manually parse frame data instead. See [issue
+3](https://github.com/Yahweasel/libavjs-webcodecs-bridge/issues/3) for some
+suggested workarounds.
+
 
 ## Muxing
 
@@ -73,7 +88,7 @@ the encoded chunks to libav.js `Packet`s.
 
 ### `configToAudioStream`, `configToVideoStream`
 
-```
+```js
 async function configToAudioStream(
     libav: LibAVJS.LibAV, config: LibAVJSWebCodecs.AudioEncoderConfig
 ): Promise<[number, number, number]>;
@@ -106,7 +121,7 @@ option to `true` when calling `ff_init_muxer`.
 
 ### `encodedAudioChunkToPacket`, `encodedVideoChunkToPacket`
 
-```
+```js
 async function encodedAudioChunkToPacket(
     libav: LibAVJS.LibAV, chunk: LibAVJSWebCodecs.EncodedAudioChunk, metadata: any,
     stream: [number, number, number], streamIndex: number
