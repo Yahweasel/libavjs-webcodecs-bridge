@@ -406,7 +406,7 @@ function times(packet: LibAVJS.Packet, stream: LibAVJS.Stream) {
     // Convert from lo, hi to f64
     let pDuration = packet.durationhi * 0x100000000 + packet.duration;
     let pts = packet.ptshi * 0x100000000 + packet.pts;
-    if (typeof LibAV !== "undefined") {
+    if (typeof LibAV !== "undefined" && LibAV.i64tof64) {
         pDuration = LibAV.i64tof64(packet.duration, packet.durationhi);
         pts = LibAV.i64tof64(packet.pts, packet.ptshi);
     }

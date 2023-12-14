@@ -183,7 +183,7 @@ function encodedChunkToPacket(
 
     // Convert into high and low bits
     let pts: number, ptshi: number, dur: number, durhi: number;
-    if (typeof LibAV !== "undefined") {
+    if (typeof LibAV !== "undefined" && LibAV.f64toi64) {
         [pts, ptshi] = LibAV.f64toi64(timestamp);
         [dur, durhi] = LibAV.f64toi64(duration);
     } else {
