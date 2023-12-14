@@ -7,7 +7,7 @@
     "typescript": "^5.1.6"
   },
   "dependencies": {
-    "libav.js": "^4.4.6",
+    "libav.js": "^4.8.6",
     "libavjs-webcodecs-polyfill": "^0.4.2"
   },
   "name": "libavjs-webcodecs-bridge",
