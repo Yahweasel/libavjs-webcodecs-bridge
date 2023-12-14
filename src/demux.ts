@@ -23,6 +23,7 @@
 
 import type * as LibAVJS from "libav.js";
 import type * as LibAVJSWebCodecs from "libavjs-webcodecs-polyfill";
+declare let LibAV : LibAVJS.LibAVWrapper;
 declare let LibAVWebCodecs : any;
 declare let EncodedAudioChunk : any;
 declare let EncodedVideoChunk : any;
@@ -402,18 +403,20 @@ export async function videoStreamToConfig(
  * WebCodecs.
  */
 function times(packet: LibAVJS.Packet, stream: LibAVJS.Stream) {
-    // Convert the duration
+    // Convert from lo, hi to f64
     let pDuration = packet.durationhi * 0x100000000 + packet.duration;
-    if (pDuration <= 0)
-        pDuration = 1;
+    let pts = packet.ptshi * 0x100000000 + packet.pts;
+    if (typeof LibAV !== "undefined") {
+        pDuration = LibAV.i64tof64(packet.duration, packet.durationhi);
+        pts = LibAV.i64tof64(packet.pts, packet.ptshi);
+    }
+
+    // Convert the duration
     const duration = Math.round(
         pDuration * stream.time_base_num / stream.time_base_den * 1000000
     );
 
     // Convert the timestamp
-    let pts = packet.ptshi * 0x100000000 + packet.pts;
-    if (pts < 0)
-        pts = 0;
     let timestamp = Math.round(
         pts * stream.time_base_num / stream.time_base_den * 1000000
     );

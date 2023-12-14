@@ -23,6 +23,7 @@
 
 import type * as LibAVJS from "libav.js";
 import type * as LibAVJSWebCodecs from "libavjs-webcodecs-polyfill";
+declare let LibAV : LibAVJS.LibAVWrapper;
 declare let LibAVWebCodecs : any;
 declare let EncodedAudioChunk : any;
 declare let EncodedVideoChunk : any;
@@ -181,17 +182,15 @@ function encodedChunkToPacket(
     const {timestamp, duration} = times(chunk, stream);
 
     // Convert into high and low bits
-    let pts = timestamp;
-    let ptshi = 0;
-    if (pts >= 0x100000000) {
-        ptshi = Math.floor(pts / 0x100000000);
-        pts = pts % 0x100000000;
-    }
-    let dur = duration;
-    let durhi = 0;
-    if (dur >= 0x100000000) {
-        durhi = Math.floor(dur / 0x100000000);
-        dur = dur % 0x100000000;
+    let pts: number, ptshi: number, dur: number, durhi: number;
+    if (typeof LibAV !== "undefined") {
+        [pts, ptshi] = LibAV.f64toi64(timestamp);
+        [dur, durhi] = LibAV.f64toi64(duration);
+    } else {
+        pts = ~~timestamp;
+        ptshi = Math.floor(timestamp / 0x100000000);
+        dur = ~~duration;
+        durhi = Math.floor(duration / 0x100000000);
     }
 
     // Create a buffer for it
