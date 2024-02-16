@@ -23,6 +23,8 @@
 
 import * as demux from "./demux";
 import * as mux from "./mux";
+import * as wctola from "./wctola";
+import * as latowc from "./latowc";
 
 export const audioStreamToConfig = demux.audioStreamToConfig;
 export const videoStreamToConfig = demux.videoStreamToConfig;
@@ -33,3 +35,9 @@ export const configToAudioStream = mux.configToAudioStream;
 export const configToVideoStream = mux.configToVideoStream;
 export const encodedAudioChunkToPacket = mux.encodedAudioChunkToPacket;
 export const encodedVideoChunkToPacket = mux.encodedVideoChunkToPacket;
+
+export const videoFrameToLAFrame = wctola.videoFrameToLAFrame;
+export const audioDataToLAFrame = wctola.audioDataToLAFrame;
+
+export const laFrameToVideoFrame = latowc.laFrameToVideoFrame;
+export const laFrameToAudioData = latowc.laFrameToAudioData;

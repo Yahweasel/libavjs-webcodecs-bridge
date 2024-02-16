@@ -219,8 +219,22 @@ async function main() {
                 const {done, value} = await decRdr.read();
                 if (done)
                     break;
-                enc.encode(value);
-                value.close();
+
+                /* Pointlessly convert back and forth, just to demonstrate those
+                 * functions */
+                let frame;
+                if (value.codedWidth) {
+                    frame = await LibAVWebCodecsBridge.videoFrameToLAFrame(value);
+                    value.close();
+                    frame = LibAVWebCodecsBridge.laFrameToVideoFrame(frame);
+                } else {
+                    frame = await LibAVWebCodecsBridge.audioDataToLAFrame(value);
+                    value.close();
+                    frame = LibAVWebCodecsBridge.laFrameToAudioData(frame);
+                }
+
+                enc.encode(frame);
+                frame.close();
             }
 
             await enc.flush();
