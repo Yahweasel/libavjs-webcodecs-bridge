@@ -67,8 +67,6 @@ export function laFrameToVideoFrame(
         for (let y = 0; y < plane.length; y++)
             size += plane[y].length;
     }
-    console.log(frame);
-    console.log(size);
     const data = new Uint8Array(size);
     let offset = 0;
     for (let p = 0; p < frame.data.length; p++) {
