@@ -44,14 +44,29 @@ function i64tof64(lo, hi) {
 }
 
 /**
- * Convert a libav.js Frame to a VideoFrame. The libav.js frame is assumed to
- * use the same timebase as WebCodecs, 1/1000000.
- * @param frame  libav.js Frame
- * @param opts  Optional options, in particular a VideoFrame constructor to use.
+ * Convert a libav.js timestamp to a WebCodecs timestamp.
+ * @param lo  Low bits of the timestamp.
+ * @param hi  High bits of the timestamp.
+ * @param timeBase  Optional timebase to use for conversion.
+ */
+function laTimeToWCTime(lo: number, hi: number, timeBase?: [number, number]) {
+    let ret = i64tof64(lo, hi);
+    if (timeBase)
+        ret = Math.round(ret / 1000000 * timeBase[1] / timeBase[0]);
+    return ret;
+}
+
+/**
+ * Convert a libav.js Frame to a VideoFrame. If not provided in opts, the
+ * libav.js frame is assumed to use the same timebase as WebCodecs, 1/1000000.
+ * @param frame  libav.js Frame.
+ * @param opts  Optional options, namely a VideoFrame constructor and timebase
+ *              to use.
  */
 export function laFrameToVideoFrame(
     frame: LibAVJS.Frame, opts: {
-        VideoFrame?: any
+        VideoFrame?: any,
+        timeBase?: [number, number]
     } = {}
 ) {
     let VF: any;
@@ -113,19 +128,21 @@ export function laFrameToVideoFrame(
         format,
         codedWidth: frame.width,
         codedHeight: frame.height,
-        timestamp: i64tof64(frame.pts, frame.ptshi)
+        timestamp: laTimeToWCTime(frame.pts, frame.ptshi, opts.timeBase)
     });
 }
 
 /**
- * Convert a libav.js Frame to an AudioData. The libav.js frame is assumed to
- * use the same timebase as WebCodecs, 1/1000000.
- * @param frame  libav.js Frame
- * @param opts  Optional options, in particular an AudioData constructor to use.
+ * Convert a libav.js Frame to an AudioData. If not provide din opts, the
+ * libav.js frame is assumed to use the same timebase as WebCodecs, 1/1000000.
+ * @param frame  libav.js Frame.
+ * @param opts  Optional options, namely an AudioData constructor and timebase
+ *              to use.
  */
 export function laFrameToAudioData(
     frame: LibAVJS.Frame, opts: {
-        AudioData?: any
+        AudioData?: any,
+        timeBase?: [number, number]
     } = {}
 ) {
     let AD: any;
@@ -183,6 +200,6 @@ export function laFrameToAudioData(
         sampleRate: frame.sample_rate,
         numberOfFrames: frame.nb_samples,
         numberOfChannels: frame.channels,
-        timestamp: i64tof64(frame.pts, frame.ptshi)
+        timestamp: laTimeToWCTime(frame.pts, frame.ptshi, opts.timeBase)
     });
 }
