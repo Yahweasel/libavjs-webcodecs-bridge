@@ -1,17 +1,6 @@
 {
-  "devDependencies": {
-    "browser-pack-flat": "^3.5.0",
-    "browserify": "^17.0.0",
-    "minify": "^10.2.0",
-    "tsify": "^5.0.4",
-    "typescript": "^5.1.6"
-  },
-  "dependencies": {
-    "libav.js": "^4.8.6",
-    "libavjs-webcodecs-polyfill": "^0.4.2"
-  },
   "name": "libavjs-webcodecs-bridge",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "A bridge between libav.js and WebCodecs, to allow easier decoding of files demuxed by libav.js",
   "main": "libavjs-webcodecs-bridge.js",
   "types": "types/bridge.d.ts",
@@ -32,5 +21,16 @@
   "bugs": {
     "url": "https://github.com/Yahweasel/libavjs-webcodecs-bridge/issues"
   },
-  "homepage": "https://github.com/Yahweasel/libavjs-webcodecs-bridge#readme"
+  "homepage": "https://github.com/Yahweasel/libavjs-webcodecs-bridge#readme",
+  "devDependencies": {
+    "browser-pack-flat": "^3.5.0",
+    "browserify": "^17.0.0",
+    "minify": "^10.2.0",
+    "tsify": "^5.0.4",
+    "typescript": "^5.1.6"
+  },
+  "dependencies": {
+    "libav.js": "^4.8.6",
+    "libavjs-webcodecs-polyfill": "^0.4.2"
+  }
 }
