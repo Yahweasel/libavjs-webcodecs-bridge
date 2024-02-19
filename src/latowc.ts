@@ -52,7 +52,7 @@ function i64tof64(lo, hi) {
 function laTimeToWCTime(lo: number, hi: number, timeBase?: [number, number]) {
     let ret = i64tof64(lo, hi);
     if (timeBase)
-        ret = Math.round(ret / 1000000 * timeBase[1] / timeBase[0]);
+        ret = Math.round(ret * 1000000 * timeBase[0] / timeBase[1]);
     return ret;
 }
 
