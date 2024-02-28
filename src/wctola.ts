@@ -80,8 +80,8 @@ export async function videoFrameToLAFrame(frame: LibAVJSWebCodecs.VideoFrame) {
         data: [],
         pts: ~~frame.timestamp,
         ptshi: Math.floor(frame.timestamp / 0x100000000),
-        width: frame.displayWidth || frame.codedWidth,
-        height: frame.displayHeight || frame.codedHeight
+        width: frame.visibleRect.width,
+        height: frame.visibleRect.height
     };
     let offset = 0;
     for (let p = 0; p < planes; p++) {
@@ -92,8 +92,8 @@ export async function videoFrameToLAFrame(frame: LibAVJSWebCodecs.VideoFrame) {
             wlog2 = cwlog2;
             hlog2 = chlog2;
         }
-        for (let y = 0; y < frame.codedHeight >>> hlog2; y++) {
-            const w = (frame.codedWidth * bpp) >>> wlog2;
+        for (let y = 0; y < frame.visibleRect.height >>> hlog2; y++) {
+            const w = (frame.visibleRect.width * bpp) >>> wlog2;
             plane.push(data.subarray(offset, offset + w));
             offset += w;
         }
