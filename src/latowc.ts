@@ -76,19 +76,24 @@ export function laFrameToVideoFrame(
         VF = VideoFrame;
 
     // Combine all the frame data into a single object
+    const layout: LibAVJSWebCodecs.PlaneLayout[] = [];
     let size = 0;
     for (let p = 0; p < frame.data.length; p++) {
         const plane = frame.data[p];
-        for (let y = 0; y < plane.length; y++)
-            size += plane[y].length;
+        layout.push({
+            offset: size,
+            stride: plane[0].length
+        });
+        size += plane.length * plane[0].length;
     }
     const data = new Uint8Array(size);
     let offset = 0;
     for (let p = 0; p < frame.data.length; p++) {
         const plane = frame.data[p];
+        const linesize = plane[0].length;
         for (let y = 0; y < plane.length; y++) {
             data.set(plane[y], offset);
-            offset += plane[y].length;
+            offset += linesize;
         }
     }
 
@@ -128,7 +133,8 @@ export function laFrameToVideoFrame(
         format,
         codedWidth: frame.width,
         codedHeight: frame.height,
-        timestamp: laTimeToWCTime(frame.pts, frame.ptshi, opts.timeBase)
+        timestamp: laTimeToWCTime(frame.pts, frame.ptshi, opts.timeBase),
+        layout
     });
 }
 
