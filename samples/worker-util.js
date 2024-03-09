@@ -24,9 +24,9 @@
  */
 
 if (typeof importScripts !== "undefined") {
-    LibAV = {base: "https://unpkg.com/libav.js@4.8.6/dist"};
-    importScripts(LibAV.base + "/libav-4.8.6.0.1-webcodecs.js");
-    importScripts("../../libavjs-webcodecs-bridge.js");
+    LibAV = {base: "https://cdn.jsdelivr.net/npm/@libav.js/variant-webcodecs@5.1.6/dist"};
+    importScripts(LibAV.base + "/libav-5.1.6.1.1-webcodecs.js");
+    importScripts("../../dist/libavjs-webcodecs-bridge.js");
 }
 
 async function sampleDemux(file, readOpts) {
