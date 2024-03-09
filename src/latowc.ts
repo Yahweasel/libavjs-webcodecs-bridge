@@ -21,7 +21,7 @@
  * WebCodecs VideoFrames and AudioDatas.
  */
 
-import type * as LibAVJS from "libav.js";
+import type * as LibAVJS from "@libav.js/variant-webcodecs";
 import * as LibAVJSWebCodecs from "libavjs-webcodecs-polyfill";
 
 declare let VideoFrame: any, AudioData: any;
@@ -66,7 +66,8 @@ function laTimeToWCTime(lo: number, hi: number, timeBase?: [number, number]) {
 export function laFrameToVideoFrame(
     frame: LibAVJS.Frame, opts: {
         VideoFrame?: any,
-        timeBase?: [number, number]
+        timeBase?: [number, number],
+        transfer?: boolean
     } = {}
 ) {
     let VF: any;
@@ -75,26 +76,42 @@ export function laFrameToVideoFrame(
     else
         VF = VideoFrame;
 
-    // Combine all the frame data into a single object
-    const layout: LibAVJSWebCodecs.PlaneLayout[] = [];
-    let size = 0;
-    for (let p = 0; p < frame.data.length; p++) {
-        const plane = frame.data[p];
-        layout.push({
-            offset: size,
-            stride: plane[0].length
-        });
-        size += plane.length * plane[0].length;
-    }
-    const data = new Uint8Array(size);
-    let offset = 0;
-    for (let p = 0; p < frame.data.length; p++) {
-        const plane = frame.data[p];
-        const linesize = plane[0].length;
-        for (let y = 0; y < plane.length; y++) {
-            data.set(plane[y], offset);
-            offset += linesize;
+    let layout: LibAVJSWebCodecs.PlaneLayout[];
+    let data: Uint8Array;
+    let transfer: ArrayBuffer[] = [];
+
+    if (frame.layout) {
+        // Modern (libav.js ≥ 5) frame in WebCodecs-like format
+        data = frame.data;
+        layout = frame.layout;
+        if (opts.transfer)
+            transfer.push(data.buffer);
+
+    } else {
+        // Pre-libavjs-5 frame with one array per row
+        // Combine all the frame data into a single object
+        const layout: LibAVJSWebCodecs.PlaneLayout[] = [];
+        let size = 0;
+        for (let p = 0; p < frame.data.length; p++) {
+            const plane = frame.data[p];
+            layout.push({
+                offset: size,
+                stride: plane[0].length
+            });
+            size += plane.length * plane[0].length;
         }
+        const data = new Uint8Array(size);
+        let offset = 0;
+        for (let p = 0; p < frame.data.length; p++) {
+            const plane = frame.data[p];
+            const linesize = plane[0].length;
+            for (let y = 0; y < plane.length; y++) {
+                data.set(plane[y], offset);
+                offset += linesize;
+            }
+        }
+        transfer.push(data.buffer);
+
     }
 
     // Choose the format
@@ -134,7 +151,8 @@ export function laFrameToVideoFrame(
         codedWidth: frame.width,
         codedHeight: frame.height,
         timestamp: laTimeToWCTime(frame.pts, frame.ptshi, opts.timeBase),
-        layout
+        layout,
+        transfer
     });
 }
 

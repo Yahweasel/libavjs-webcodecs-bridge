@@ -21,7 +21,7 @@
  * WebCodecs data to libav.js's formats and muxing.
  */
 
-import type * as LibAVJS from "libav.js";
+import type * as LibAVJS from "@libav.js/variant-webcodecs";
 import type * as LibAVJSWebCodecs from "libavjs-webcodecs-polyfill";
 declare let LibAV : LibAVJS.LibAVWrapper;
 declare let LibAVWebCodecs : any;
