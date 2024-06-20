@@ -1,7 +1,7 @@
 /*
  * This file is part of the libav.js WebCodecs Bridge implementation.
  *
- * Copyright (c) 2023 Yahweasel
+ * Copyright (c) 2023, 2024 Yahweasel
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -411,14 +411,22 @@ function times(packet: LibAVJS.Packet, stream: LibAVJS.Stream) {
         pts = LibAV.i64tof64(packet.pts, packet.ptshi);
     }
 
+    // Get the appropriate time base
+    let tbNum = packet.time_base_num;
+    let tbDen = packet.time_base_den;
+    if (!tbNum) {
+        tbNum = stream.time_base_num;
+        tbDen = stream.time_base_den;
+    }
+
     // Convert the duration
     const duration = Math.round(
-        pDuration * stream.time_base_num / stream.time_base_den * 1000000
+        pDuration * tbNum / tbDen * 1000000
     );
 
     // Convert the timestamp
     let timestamp = Math.round(
-        pts * stream.time_base_num / stream.time_base_den * 1000000
+        pts * tbNum / tbDen * 1000000
     );
 
     return {timestamp, duration};

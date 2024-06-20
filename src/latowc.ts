@@ -80,6 +80,10 @@ export function laFrameToVideoFrame(
     let data: Uint8Array;
     let transfer: ArrayBuffer[] = [];
 
+    let timeBase = opts.timeBase;
+    if (!timeBase && frame.time_base_num)
+        timeBase = [frame.time_base_num, frame.time_base_den];
+
     if (frame.layout) {
         // Modern (libav.js ≥ 5) frame in WebCodecs-like format
         data = frame.data;
@@ -150,7 +154,7 @@ export function laFrameToVideoFrame(
         format,
         codedWidth: frame.width,
         codedHeight: frame.height,
-        timestamp: laTimeToWCTime(frame.pts, frame.ptshi, opts.timeBase),
+        timestamp: laTimeToWCTime(frame.pts, frame.ptshi, timeBase),
         layout,
         transfer
     });
@@ -174,6 +178,10 @@ export function laFrameToAudioData(
         AD = opts.AudioData;
     else
         AD = AudioData;
+
+    let timeBase = opts.timeBase;
+    if (!timeBase && frame.time_base_num)
+        timeBase = [frame.time_base_num, frame.time_base_den];
 
     // Combine all the frame data into a single object
     let size = 0;
@@ -224,6 +232,6 @@ export function laFrameToAudioData(
         sampleRate: frame.sample_rate,
         numberOfFrames: frame.nb_samples,
         numberOfChannels: frame.channels,
-        timestamp: laTimeToWCTime(frame.pts, frame.ptshi, opts.timeBase)
+        timestamp: laTimeToWCTime(frame.pts, frame.ptshi, timeBase)
     });
 }

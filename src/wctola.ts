@@ -92,6 +92,8 @@ export async function videoFrameToLAFrame(frame: LibAVJSWebCodecs.VideoFrame) {
         data: null,
         pts: ~~frame.timestamp,
         ptshi: Math.floor(frame.timestamp / 0x100000000),
+        time_base_num: 1,
+        time_base_den: 1000000,
         width: frame.visibleRect.width,
         height: frame.visibleRect.height
     };
@@ -178,6 +180,8 @@ export async function audioDataToLAFrame(frame: LibAVJSWebCodecs.AudioData) {
         data: null,
         pts: ~~frame.timestamp,
         ptshi: Math.floor(frame.timestamp / 0x100000000),
+        time_base_num: 1,
+        time_base_den: 1000000,
         sample_rate: frame.sampleRate,
         nb_samples: frame.numberOfFrames,
         channels: frame.numberOfChannels

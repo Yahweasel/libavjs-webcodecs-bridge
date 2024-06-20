@@ -1,7 +1,7 @@
 /*
  * This file is part of the libav.js WebCodecs Bridge implementation.
  *
- * Copyright (c) 2023 Yahweasel
+ * Copyright (c) 2023, 2024 Yahweasel
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -77,7 +77,7 @@ export async function configToAudioStream(
     }
 
     // And the timebase
-    let timebaseNum = 1, timebaseDen = 1000;
+    let timebaseNum = 1, timebaseDen = 1000000;
     if (config.sampleRate)
         timebaseDen = config.sampleRate;
 
@@ -132,7 +132,7 @@ export async function configToVideoStream(
     }
 
     // And the timebase
-    let timebaseNum = 1, timebaseDen = 1000;
+    let timebaseNum = 1, timebaseDen = 1000000;
     if (config.framerate) {
         // Simple if it's an integer
         if (config.framerate === ~~config.framerate) {
@@ -163,7 +163,10 @@ export async function configToVideoStream(
  * Convert the timestamp and duration from microseconds to an arbitrary timebase
  * given by libav.js (internal)
  */
-function times(chunk: LibAVJSWebCodecs.EncodedAudioChunk | LibAVJSWebCodecs.EncodedVideoChunk | EncodedVideoChunk, stream: [number, number, number]) {
+function times(
+    chunk: LibAVJSWebCodecs.EncodedAudioChunk | LibAVJSWebCodecs.EncodedVideoChunk | EncodedVideoChunk,
+    stream: [number, number, number]
+) {
     const num = stream[1];
     const den = stream[2];
     return {
@@ -202,6 +205,7 @@ function encodedChunkToPacket(
         data,
         pts, ptshi,
         dts: pts, dtshi: ptshi,
+        time_base_num: stream[1], time_base_den: stream[2],
         stream_index: streamIndex,
         flags: 0,
         duration: dur, durationhi: durhi
