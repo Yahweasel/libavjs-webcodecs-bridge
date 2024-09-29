@@ -10,7 +10,7 @@
   },
   "scripts": {
     "build": "tsc && rollup -c",
-    "clean": "rm -f src/*.js",
+    "clean": "rm -f dist/",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -29,8 +29,8 @@
   },
   "homepage": "https://github.com/Yahweasel/libavjs-webcodecs-bridge#readme",
   "devDependencies": {
-    "@libav.js/variant-webcodecs": "=5.4.6",
-    "@libav.js/variant-webm-vp9": "=5.4.6",
+    "@libav.js/variant-webcodecs": "=6.0.7",
+    "@libav.js/variant-webm-vp9": "=6.0.7",
     "@rollup/plugin-commonjs": "^25.0.7",
     "@rollup/plugin-node-resolve": "^15.2.3",
     "@rollup/plugin-terser": "^0.4.4",

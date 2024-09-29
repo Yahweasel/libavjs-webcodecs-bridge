@@ -25,7 +25,7 @@
 
 if (typeof importScripts !== "undefined") {
     LibAV = {base: "https://cdn.jsdelivr.net/npm/@libav.js/variant-webcodecs@5.1.6/dist"};
-    importScripts(LibAV.base + "/libav-5.1.6.1.1-webcodecs.js");
+    importScripts(LibAV.base + "/libav-6.0.7.0.2-webcodecs.js");
     importScripts("../../dist/libavjs-webcodecs-bridge.js");
 }
 
