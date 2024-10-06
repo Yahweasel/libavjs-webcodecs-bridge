@@ -72,6 +72,7 @@ export async function audioStreamToConfig(
             const profile = codecpar.profile!;
             switch (profile) {
                 case 1: // AAC_LOW
+                default:
                     ret.codec = "mp4a.40.2";
                     break;
 
@@ -157,9 +158,13 @@ export async function videoStreamToConfig(
             let codec = "av01";
 
             // <profile>
+            if (profile < 0)
+                profile = 0;
             codec += `.0${profile}`;
 
             // <level><tier>
+            if (level < 0)
+                level = 0;
             let levelS = level.toString();
             if (levelS.length < 2)
                 levelS = `0${level}`;
@@ -320,6 +325,10 @@ export async function videoStreamToConfig(
             } else {
                 /* NOTE: This string was extrapolated from hlsenc.c, but is clearly
                  * not valid for every possible H.265 stream. */
+                if (profile < 0)
+                    profile = 0;
+                if (level < 0)
+                    level = 0;
                 codec = `hev1.${profile}.4.L${level}.B01`;
 
             }
