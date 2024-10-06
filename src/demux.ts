@@ -35,24 +35,26 @@ declare let EncodedVideoChunk : any;
  * @param stream  The stream to convert.
  */
 export async function audioStreamToConfig(
-    libav: LibAVJS.LibAV, stream: LibAVJS.Stream
+    libav: LibAVJS.LibAV, stream: LibAVJS.Stream | LibAVJS.CodecParameters
 ): Promise<LibAVJSWebCodecs.AudioDecoderConfig> {
-    const codecString = await libav.avcodec_get_name(stream.codec_id);
+    let codecpar: LibAVJS.CodecParameters;
+    if ((<LibAVJS.Stream> stream).codecpar) {
+        codecpar = await libav.ff_copyout_codecpar(
+            (<LibAVJS.Stream> stream).codecpar
+        );
+    } else {
+        codecpar = <LibAVJS.CodecParameters> stream;
+    }
+
+    const codecString = await libav.avcodec_get_name(codecpar.codec_id);
 
     // Start with the basics
     const ret: LibAVJSWebCodecs.AudioDecoderConfig = {
         codec: null,
-        sampleRate: await libav.AVCodecParameters_sample_rate(stream.codecpar),
-        numberOfChannels: await libav.AVCodecParameters_channels(stream.codecpar)
+        sampleRate: codecpar.sample_rate!,
+        numberOfChannels: codecpar.channels!
     };
-
-    // Get the extradata
-    const extradataPtr = await libav.AVCodecParameters_extradata(stream.codecpar);
-    let extradata: Uint8Array = null;
-    if (extradataPtr) {
-        const edSize = await libav.AVCodecParameters_extradata_size(stream.codecpar);
-        extradata = await libav.copyout_u8(extradataPtr, edSize);
-    }
+    const extradata = codecpar.extradata;
 
     // Then convert the actual codec
     switch (codecString) {
@@ -67,7 +69,7 @@ export async function audioStreamToConfig(
 
         case "aac":
         {
-            const profile = await libav.AVCodecParameters_profile(stream.codecpar);
+            const profile = codecpar.profile!;
             switch (profile) {
                 case 1: // AAC_LOW
                     ret.codec = "mp4a.40.2";
@@ -101,8 +103,8 @@ export async function audioStreamToConfig(
                 ret.codec = {libavjs:{
                     codec: codecString,
                     ctx: {
-                        channels: await libav.AVCodecParameters_channels(stream.codecpar),
-                        sample_rate: await libav.AVCodecParameters_sample_rate(stream.codecpar)
+                        channels: codecpar.channels!,
+                        sample_rate: codecpar.sample_rate!
                     }
                 }};
                 if (extradata)
@@ -123,28 +125,30 @@ export async function audioStreamToConfig(
  * @param stream  The stream to convert.
  */
 export async function videoStreamToConfig(
-    libav: LibAVJS.LibAV, stream: LibAVJS.Stream
+    libav: LibAVJS.LibAV, stream: LibAVJS.Stream | LibAVJS.CodecParameters
 ): Promise<LibAVJSWebCodecs.VideoDecoderConfig> {
-    const codecString = await libav.avcodec_get_name(stream.codec_id);
+    let codecpar: LibAVJS.CodecParameters;
+    if ((<LibAVJS.Stream> stream).codecpar) {
+        codecpar = await libav.ff_copyout_codecpar(
+            (<LibAVJS.Stream> stream).codecpar
+        );
+    } else {
+        codecpar = <LibAVJS.CodecParameters> stream;
+    }
+
+    const codecString = await libav.avcodec_get_name(codecpar.codec_id);
 
     // Start with the basics
     const ret: LibAVJSWebCodecs.VideoDecoderConfig = {
         codec: null,
-        codedWidth: await libav.AVCodecParameters_width(stream.codecpar),
-        codedHeight: await libav.AVCodecParameters_height(stream.codecpar)
+        codedWidth: codecpar.width!,
+        codedHeight: codecpar.height!
     };
-
-    // Get the extradata
-    const extradataPtr = await libav.AVCodecParameters_extradata(stream.codecpar);
-    let extradata: Uint8Array = null;
-    if (extradataPtr) {
-        const edSize = await libav.AVCodecParameters_extradata_size(stream.codecpar);
-        extradata = await libav.copyout_u8(extradataPtr, edSize);
-    }
+    const extradata = codecpar.extradata;
 
     // Some commonly needed data
-    let profile = await libav.AVCodecParameters_profile(stream.codecpar);
-    let level = await libav.AVCodecParameters_level(stream.codecpar);
+    let profile = codecpar.profile!;
+    let level = codecpar.level!;
 
     // Then convert the actual codec
     switch (codecString) {
@@ -163,7 +167,7 @@ export async function videoStreamToConfig(
             codec += `.${levelS}${tier}`;
 
             // <bitDepth>
-            const format = await libav.AVCodecParameters_format(stream.codecpar);
+            const format = codecpar.format;
             const desc = await libav.av_pix_fmt_desc_get(format);
             let bitDepth = (await libav.AVPixFmtDescriptor_comp_depth(desc, 0)).toString();
             if (bitDepth.length < 2)
@@ -349,7 +353,7 @@ export async function videoStreamToConfig(
             codec += `.${levelS}`;
 
             // <bitDepth>
-            const format = await libav.AVCodecParameters_format(stream.codecpar);
+            const format = codecpar.format;
             const desc = await libav.av_pix_fmt_desc_get(format);
             let bitDepth = (await libav.AVPixFmtDescriptor_comp_depth(desc, 0)).toString();
             if (bitDepth === "0")
@@ -383,8 +387,9 @@ export async function videoStreamToConfig(
                 ret.codec = {libavjs:{
                     codec: codecString,
                     ctx: {
-                        channels: await libav.AVCodecParameters_channels(stream.codecpar),
-                        sample_rate: await libav.AVCodecParameters_sample_rate(stream.codecpar)
+                        pix_fmt: codecpar.format,
+                        width: codecpar.width!,
+                        height: codecpar.height!
                     }
                 }};
                 if (extradata)
@@ -402,7 +407,10 @@ export async function videoStreamToConfig(
  * Convert the timestamp and duration from a libav.js packet to microseconds for
  * WebCodecs.
  */
-function times(packet: LibAVJS.Packet, stream: LibAVJS.Stream) {
+function times(
+    packet: LibAVJS.Packet,
+    timeBaseSrc: {time_base_num: number, time_base_den: number} | [number, number]
+) {
     // Convert from lo, hi to f64
     let pDuration = packet.durationhi * 0x100000000 + packet.duration;
     let pts = packet.ptshi * 0x100000000 + packet.pts;
@@ -415,8 +423,15 @@ function times(packet: LibAVJS.Packet, stream: LibAVJS.Stream) {
     let tbNum = packet.time_base_num;
     let tbDen = packet.time_base_den;
     if (!tbNum) {
-        tbNum = stream.time_base_num;
-        tbDen = stream.time_base_den;
+        if ((<[number, number]> timeBaseSrc).length) {
+            const timeBase = <[number, number]> timeBaseSrc;
+            tbNum = timeBase[0];
+            tbDen = timeBase[1];
+        } else {
+            const timeBase = <{time_base_num: number, time_base_den: number}> timeBaseSrc;
+            tbNum = timeBase.time_base_num;
+            tbDen = timeBase.time_base_den;
+        }
     }
 
     // Convert the duration
@@ -435,12 +450,15 @@ function times(packet: LibAVJS.Packet, stream: LibAVJS.Stream) {
 /**
  * Convert a libav.js audio packet to a WebCodecs EncodedAudioChunk.
  * @param packet  The packet itself.
- * @param stream  The stream this packet belongs to (necessary for timestamp conversion).
+ * @param timeBaseSrc  Source for time base, which can be a Stream or just a
+ *                     timebase.
  * @param opts  Extra options. In particular, if using a polyfill, you can set
  *              the EncodedAudioChunk constructor here.
  */
 export function packetToEncodedAudioChunk(
-    packet: LibAVJS.Packet, stream: LibAVJS.Stream, opts: {
+    packet: LibAVJS.Packet,
+    timeBaseSrc: {time_base_num: number, time_base_den: number} | [number, number],
+    opts: {
         EncodedAudioChunk?: any
     } = {}
 ): LibAVJSWebCodecs.EncodedAudioChunk {
@@ -450,7 +468,7 @@ export function packetToEncodedAudioChunk(
     else
         EAC = EncodedAudioChunk;
 
-    const {timestamp, duration} = times(packet, stream);
+    const {timestamp, duration} = times(packet, timeBaseSrc);
 
     return new EAC({
         type: "key", // all audio chunks are keyframes in all audio codecs
@@ -463,12 +481,15 @@ export function packetToEncodedAudioChunk(
 /**
  * Convert a libav.js video packet to a WebCodecs EncodedVideoChunk.
  * @param packet  The packet itself.
- * @param stream  The stream this packet belongs to (necessary for timestamp conversion).
+ * @param timeBaseSrc  Source for time base, which can be a Stream or just a
+ *                     timebase.
  * @param opts  Extra options. In particular, if using a polyfill, you can set
  *              the EncodedVideoChunk constructor here.
  */
 export function packetToEncodedVideoChunk(
-    packet: LibAVJS.Packet, stream: LibAVJS.Stream, opts: {
+    packet: LibAVJS.Packet,
+    timeBaseSrc: {time_base_num: number, time_base_den: number} | [number, number],
+    opts: {
         EncodedVideoChunk?: any
     } = {}
 ): LibAVJSWebCodecs.EncodedVideoChunk {
@@ -478,7 +499,7 @@ export function packetToEncodedVideoChunk(
     else
         EVC = EncodedVideoChunk;
 
-    const {timestamp, duration} = times(packet, stream);
+    const {timestamp, duration} = times(packet, timeBaseSrc);
 
     return new EVC({
         type: (packet.flags & 1) ? "key" : "delta",
