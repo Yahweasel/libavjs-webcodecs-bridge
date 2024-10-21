@@ -173,7 +173,7 @@ async function main() {
     (async () => {
         while (true) {
             const [res, packets] =
-                await libav.ff_read_multi(ifc, rpkt, null, {limit: 1});
+                await libav.ff_read_frame_multi(ifc, rpkt, {limit: 1});
             if (res !== -libav.EAGAIN &&
                 res !== 0 &&
                 res !== libav.AVERROR_EOF)
