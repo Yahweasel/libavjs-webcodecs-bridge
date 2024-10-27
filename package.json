@@ -3,10 +3,11 @@
   "version": "0.2.0",
   "description": "A bridge between libav.js and WebCodecs, to allow easier decoding of files demuxed by libav.js",
   "main": "dist/libavjs-webcodecs-bridge.js",
-  "types": "src/bridge.ts",
+  "types": "./dist/bridge.d.ts",
   "exports": {
     "import": "./dist/libavjs-webcodecs-bridge.mjs",
-    "default": "./dist/libavjs-webcodecs-bridge.js"
+    "default": "./dist/libavjs-webcodecs-bridge.js",
+    "types": "./dist/bridge.d.ts"
   },
   "scripts": {
     "build": "tsc && rollup -c",
