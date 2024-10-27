@@ -1,5 +1,5 @@
 libavjs-webcodecs-bridge is a bridge to help you use [libav.js](https://github.com/Yahweasel/libav.js/) and [WebCodecs](https://github.com/w3c/webcodecs) (or
-[libavjs-webcodecs-polyfill](https://github.com/ennuicastr/libavjs-webcodecs-polyfill) together.
+[libavjs-webcodecs-polyfill](https://github.com/ennuicastr/libavjs-webcodecs-polyfill)) together.
 
 WebCodecs does not come with demuxers or muxers. libav.js has those as well as
 encoders and decoders, but if you have WebCodecs available, you probably should
