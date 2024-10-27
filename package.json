@@ -6,7 +6,8 @@
   "types": "src/bridge.ts",
   "exports": {
     "import": "./dist/libavjs-webcodecs-bridge.mjs",
-    "default": "./dist/libavjs-webcodecs-bridge.js"
+    "default": "./dist/libavjs-webcodecs-bridge.js",
+    "types": "./src/bridge.ts"
   },
   "scripts": {
     "build": "tsc && rollup -c",
