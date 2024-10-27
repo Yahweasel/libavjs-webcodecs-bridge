@@ -36,7 +36,7 @@ declare let EncodedVideoChunk : any;
  */
 export async function audioStreamToConfig(
     libav: LibAVJS.LibAV, stream: LibAVJS.Stream | LibAVJS.CodecParameters
-): Promise<LibAVJSWebCodecs.AudioDecoderConfig> {
+): Promise<LibAVJSWebCodecs.AudioDecoderConfig | null> {
     let codecpar: LibAVJS.CodecParameters;
     if ((<LibAVJS.Stream> stream).codecpar) {
         codecpar = await libav.ff_copyout_codecpar(
@@ -50,7 +50,7 @@ export async function audioStreamToConfig(
 
     // Start with the basics
     const ret: LibAVJSWebCodecs.AudioDecoderConfig = {
-        codec: null,
+        codec: "unknown",
         sampleRate: codecpar.sample_rate!,
         numberOfChannels: codecpar.channels!
     };
@@ -127,7 +127,7 @@ export async function audioStreamToConfig(
  */
 export async function videoStreamToConfig(
     libav: LibAVJS.LibAV, stream: LibAVJS.Stream | LibAVJS.CodecParameters
-): Promise<LibAVJSWebCodecs.VideoDecoderConfig> {
+): Promise<LibAVJSWebCodecs.VideoDecoderConfig | null> {
     let codecpar: LibAVJS.CodecParameters;
     if ((<LibAVJS.Stream> stream).codecpar) {
         codecpar = await libav.ff_copyout_codecpar(
@@ -141,7 +141,7 @@ export async function videoStreamToConfig(
 
     // Start with the basics
     const ret: LibAVJSWebCodecs.VideoDecoderConfig = {
-        codec: null,
+        codec: "unknown",
         codedWidth: codecpar.width!,
         codedHeight: codecpar.height!
     };
@@ -421,16 +421,16 @@ function times(
     timeBaseSrc: {time_base_num: number, time_base_den: number} | [number, number]
 ) {
     // Convert from lo, hi to f64
-    let pDuration = packet.durationhi * 0x100000000 + packet.duration;
-    let pts = packet.ptshi * 0x100000000 + packet.pts;
+    let pDuration = (packet.durationhi||0) * 0x100000000 + (packet.duration||0);
+    let pts = (packet.ptshi||0) * 0x100000000 + (packet.pts||0);
     if (typeof LibAV !== "undefined" && LibAV.i64tof64) {
-        pDuration = LibAV.i64tof64(packet.duration, packet.durationhi);
-        pts = LibAV.i64tof64(packet.pts, packet.ptshi);
+        pDuration = LibAV.i64tof64(packet.duration||0, packet.durationhi||0);
+        pts = LibAV.i64tof64(packet.pts||0, packet.ptshi||0);
     }
 
     // Get the appropriate time base
-    let tbNum = packet.time_base_num;
-    let tbDen = packet.time_base_den;
+    let tbNum = packet.time_base_num || 1;
+    let tbDen = packet.time_base_den || 1000000;
     if (!tbNum) {
         if ((<[number, number]> timeBaseSrc).length) {
             const timeBase = <[number, number]> timeBaseSrc;
@@ -511,7 +511,7 @@ export function packetToEncodedVideoChunk(
     const {timestamp, duration} = times(packet, timeBaseSrc);
 
     return new EVC({
-        type: (packet.flags & 1) ? "key" : "delta",
+        type: ((packet.flags||0) & 1) ? "key" : "delta",
         timestamp,
         duration,
         data: packet.data.buffer

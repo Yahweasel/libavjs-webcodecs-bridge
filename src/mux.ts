@@ -171,7 +171,7 @@ function times(
     const den = stream[2];
     return {
         timestamp: Math.round(chunk.timestamp * den / num / 1000000),
-        duration: Math.round(chunk.duration * den / num / 1000000)
+        duration: Math.round((chunk.duration||0) * den / num / 1000000)
     };
 }
 

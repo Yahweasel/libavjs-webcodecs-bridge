@@ -27,7 +27,7 @@ import * as LibAVJSWebCodecs from "libavjs-webcodecs-polyfill";
 declare let VideoFrame: any, AudioData: any;
 
 // (Duplicated from libav.js)
-function i64tof64(lo, hi) {
+function i64tof64(lo: number, hi: number) {
     // Common positive case
     if (!hi && lo >= 0) return lo;
 
@@ -82,7 +82,7 @@ export function laFrameToVideoFrame(
 
     let timeBase = opts.timeBase;
     if (!timeBase && frame.time_base_num)
-        timeBase = [frame.time_base_num, frame.time_base_den];
+        timeBase = [frame.time_base_num||1, frame.time_base_den||1000000];
 
     if (frame.layout) {
         // Modern (libav.js ≥ 5) frame in WebCodecs-like format
@@ -94,7 +94,7 @@ export function laFrameToVideoFrame(
     } else {
         // Pre-libavjs-5 frame with one array per row
         // Combine all the frame data into a single object
-        const layout: LibAVJSWebCodecs.PlaneLayout[] = [];
+        layout = [];
         let size = 0;
         for (let p = 0; p < frame.data.length; p++) {
             const plane = frame.data[p];
@@ -104,7 +104,7 @@ export function laFrameToVideoFrame(
             });
             size += plane.length * plane[0].length;
         }
-        const data = new Uint8Array(size);
+        data = new Uint8Array(size);
         let offset = 0;
         for (let p = 0; p < frame.data.length; p++) {
             const plane = frame.data[p];
@@ -154,7 +154,7 @@ export function laFrameToVideoFrame(
         format,
         codedWidth: frame.width,
         codedHeight: frame.height,
-        timestamp: laTimeToWCTime(frame.pts, frame.ptshi, timeBase),
+        timestamp: laTimeToWCTime(frame.pts||0, frame.ptshi||0, timeBase),
         layout,
         transfer
     });
@@ -181,7 +181,7 @@ export function laFrameToAudioData(
 
     let timeBase = opts.timeBase;
     if (!timeBase && frame.time_base_num)
-        timeBase = [frame.time_base_num, frame.time_base_den];
+        timeBase = [frame.time_base_num||1, frame.time_base_den||1000000];
 
     // Combine all the frame data into a single object
     let size = 0;
@@ -232,6 +232,6 @@ export function laFrameToAudioData(
         sampleRate: frame.sample_rate,
         numberOfFrames: frame.nb_samples,
         numberOfChannels: frame.channels,
-        timestamp: laTimeToWCTime(frame.pts, frame.ptshi, timeBase)
+        timestamp: laTimeToWCTime(frame.pts||0, frame.ptshi||0, timeBase)
     });
 }
