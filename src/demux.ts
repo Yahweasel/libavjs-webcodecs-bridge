@@ -429,7 +429,7 @@ function times(
     }
 
     // Get the appropriate time base
-    let tbNum = packet.time_base_num || 1;
+    let tbNum = packet.time_base_num || 0;
     let tbDen = packet.time_base_den || 1000000;
     if (!tbNum) {
         if ((<[number, number]> timeBaseSrc).length) {
