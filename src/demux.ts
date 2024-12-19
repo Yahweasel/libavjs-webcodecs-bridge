@@ -21,7 +21,7 @@
  * then converting everything to WebCodecs for decoding.
  */
 
-import type * as LibAVJS from "@libav.js/variant-webcodecs";
+import type * as LibAVJS from "@libav.js/types";
 import type * as LibAVJSWebCodecs from "libavjs-webcodecs-polyfill";
 declare let LibAV : LibAVJS.LibAVWrapper;
 declare let LibAVWebCodecs : any;

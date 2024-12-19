@@ -21,7 +21,7 @@
  * WebCodecs VideoFrames and AudioDatas.
  */
 
-import type * as LibAVJS from "@libav.js/variant-webcodecs";
+import type * as LibAVJS from "@libav.js/types";
 import * as LibAVJSWebCodecs from "libavjs-webcodecs-polyfill";
 
 declare let VideoFrame: any, AudioData: any;
