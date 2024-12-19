@@ -1,6 +1,6 @@
 {
   "name": "libavjs-webcodecs-bridge",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "A bridge between libav.js and WebCodecs, to allow easier decoding of files demuxed by libav.js",
   "main": "dist/libavjs-webcodecs-bridge.js",
   "types": "src/bridge.ts",
