@@ -160,7 +160,7 @@ export async function videoStreamToConfig(
             // <profile>
             if (profile < 0)
                 profile = 0;
-            codec += `.0${profile}`;
+            codec += `.${profile}`;
 
             // <level><tier>
             if (level < 0)
@@ -178,28 +178,6 @@ export async function videoStreamToConfig(
             if (bitDepth.length < 2)
                 bitDepth = `0${bitDepth}`;
             codec += `.${bitDepth}`;
-
-            // <monochrome>
-            const nbComponents = await libav.AVPixFmtDescriptor_nb_components(desc);
-            if (nbComponents < 2)
-                codec += ".1";
-            else
-                codec += ".0";
-
-            // .<chromaSubsampling>
-            let subX = 0, subY = 0, subP = 0;
-            if (nbComponents < 2) {
-                // Monochrome is always considered subsampled (weirdly)
-                subX = 1;
-                subY = 1;
-            } else {
-                subX = await libav.AVPixFmtDescriptor_log2_chroma_w(desc);
-                subY = await libav.AVPixFmtDescriptor_log2_chroma_h(desc);
-                /* FIXME: subP (subsampling position) mainly represents the
-                 * *vertical* position, which doesn't seem to be exposed by
-                 * ffmpeg, at least not in a usable way */
-            }
-            codec += `.${subX}${subY}${subP}`;
 
             // FIXME: the rest are technically optional, so left out
             ret.codec = codec;
